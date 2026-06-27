@@ -211,6 +211,32 @@
     background-color: var(--SmartThemeChatTintColor);
 }
 
+.stmb-settings-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 12px;
+}
+
+.stmb-settings-tab {
+    flex: 1 1 120px;
+    min-width: 0;
+}
+
+.stmb-settings-tab.active {
+    border-color: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeQuoteColor);
+    filter: brightness(1.1);
+}
+
+.stmb-settings-panel {
+    display: none;
+}
+
+.stmb-settings-panel.active {
+    display: block;
+}
+
 .stmb-rpg-memory-status {
     margin: 8px 0 12px;
 }

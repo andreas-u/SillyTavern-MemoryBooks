@@ -1,4 +1,10 @@
 {
+  "STMemoryBooks_TabCampaign": "Campaign",
+  "STMemoryBooks_TabAutomation": "Automation",
+  "STMemoryBooks_TabMemory": "Memory Source",
+  "STMemoryBooks_TabProfiles": "Profiles",
+  "STMemoryBooks_TabAdvanced": "Advanced",
+  "STMemoryBooks_CampaignOverview": "Campaign Overview",
   "STMemoryBooks_RpgCampaignMemory": "RPG Campaign Memory",
   "STMemoryBooks_RpgMemoryModeEnabled": "Enable automatic RPG campaign memory mode",
   "STMemoryBooks_RpgMemoryModeDesc": "Uses Auto-Summary as the first campaign memory engine while RPG-specific memory tools are added.",

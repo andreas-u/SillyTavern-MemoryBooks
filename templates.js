@@ -5,6 +5,17 @@ import { Handlebars } from '../../../../lib.js';
  */
 export const settingsTemplate = Handlebars.compile(`
     <h2 data-i18n="STMemoryBooks_Settings">📕 Memory Books Settings</h2>
+
+    <div class="stmb-settings-tabs" role="tablist" aria-label="Memory Books settings sections">
+        <button type="button" class="menu_button stmb-settings-tab active" data-stmb-tab="campaign" role="tab" aria-selected="true" data-i18n="STMemoryBooks_TabCampaign">Campaign</button>
+        <button type="button" class="menu_button stmb-settings-tab" data-stmb-tab="automation" role="tab" aria-selected="false" data-i18n="STMemoryBooks_TabAutomation">Automation</button>
+        <button type="button" class="menu_button stmb-settings-tab" data-stmb-tab="memory" role="tab" aria-selected="false" data-i18n="STMemoryBooks_TabMemory">Memory Source</button>
+        <button type="button" class="menu_button stmb-settings-tab" data-stmb-tab="profiles" role="tab" aria-selected="false" data-i18n="STMemoryBooks_TabProfiles">Profiles</button>
+        <button type="button" class="menu_button stmb-settings-tab" data-stmb-tab="advanced" role="tab" aria-selected="false" data-i18n="STMemoryBooks_TabAdvanced">Advanced</button>
+    </div>
+
+    <div class="stmb-settings-panel active" data-stmb-panel="campaign" role="tabpanel">
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CampaignOverview">Campaign Overview</h3>
         {{#if hasScene}}
         <div id="stmb-scene" class="padding10 marginBot10">
             <div class="marginBot5" data-i18n="STMemoryBooks_CurrentScene">Current Scene:</div>
@@ -39,6 +50,251 @@ export const settingsTemplate = Handlebars.compile(`
         </div>
         {{/if}}
 
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_RpgCampaignMemory">RPG Campaign Memory</h3>
+
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-rpg-memory-mode-enabled" {{#if rpgMemoryModeEnabled}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_RpgMemoryModeEnabled">Enable automatic RPG campaign memory mode</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_RpgMemoryModeDesc">Uses Auto-Summary as the first campaign memory engine while RPG-specific memory tools are added.</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-rpg-automation-policy">
+                <h4 data-i18n="STMemoryBooks_RpgAutomationPolicy">Automation Policy:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_RpgAutomationPolicyDesc">Choose whether campaign memory updates happen silently or wait for review.</small>
+                <select id="stmb-rpg-automation-policy" class="text_pole" {{#unless rpgMemoryModeEnabled}}disabled{{/unless}}>
+                    {{#each rpgAutomationPolicyOptions}}
+                    <option value="{{value}}" {{#if isSelected}}selected{{/if}}>{{label}}</option>
+                    {{/each}}
+                </select>
+            </label>
+        </div>
+
+        <div id="stmb-rpg-memory-status" class="info-block stmb-rpg-memory-status">
+            <strong data-i18n="STMemoryBooks_RpgStatusTitle">RPG status</strong>
+            <div class="stmb-rpg-status-grid">
+                <span data-i18n="STMemoryBooks_RpgStatusMode">Mode</span>
+                <span id="stmb-rpg-status-mode">{{rpgMemoryStatus.modeLabel}}</span>
+                <span data-i18n="STMemoryBooks_RpgStatusPolicy">Policy</span>
+                <span id="stmb-rpg-status-policy">{{rpgMemoryStatus.policyLabel}}</span>
+                <span data-i18n="STMemoryBooks_RpgStatusInterval">Interval</span>
+                <span><span id="stmb-rpg-status-interval">{{rpgMemoryStatus.interval}}</span> <span data-i18n="STMemoryBooks_RpgStatusMessages">messages</span></span>
+                <span data-i18n="STMemoryBooks_RpgStatusBuffer">Buffer</span>
+                <span><span id="stmb-rpg-status-buffer">{{rpgMemoryStatus.buffer}}</span> <span data-i18n="STMemoryBooks_RpgStatusMessages">messages</span></span>
+                <span data-i18n="STMemoryBooks_RpgStatusLastProcessed">Last processed</span>
+                <span id="stmb-rpg-status-last-processed">{{rpgMemoryStatus.lastProcessedLabel}}</span>
+            </div>
+        </div>
+
+        <div class="info-block">
+            <small class="opacity50p" data-i18n="STMemoryBooks_Mode">Mode:</small>
+            <h5 id="stmb-mode-badge">{{lorebookMode}}</h5>
+
+            <small class="opacity50p" data-i18n="STMemoryBooks_ActiveLorebook">Active Lorebook:</small>
+            <h5 id="stmb-active-lorebook" class="{{#unless currentLorebookName}}opacity50p{{/unless}}">
+                {{#if currentLorebookName}}
+                    {{currentLorebookName}}
+                {{else}}
+                    <span data-i18n="STMemoryBooks_NoneSelected">None selected</span>
+                {{/if}}
+            </h5>
+
+            <div id="stmb-manual-controls" style="display: {{#if manualModeEnabled}}block{{else}}none{{/if}};">
+                <div class="buttons_block marginTop5 justifyCenter gap10px whitespacenowrap" id="stmb-manual-lorebook-buttons">
+                    <!-- Manual lorebook buttons will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <div id="stmb-automatic-info" class="marginTop5" style="display: {{#if manualModeEnabled}}none{{else}}block{{/if}};">
+                <small class="opacity50p">
+                    {{#if chatBoundLorebookName}}
+                        <span data-i18n="STMemoryBooks_UsingChatBound">Using chat-bound lorebook</span> "{{chatBoundLorebookName}}"
+                    {{else}}
+                        <span data-i18n="STMemoryBooks_NoChatBound">No chat-bound lorebook. Memories will require lorebook selection.</span>
+                    {{/if}}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="stmb-settings-panel" data-stmb-panel="automation" role="tabpanel">
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_AutoMemory">Automatic Memories</h3>
+
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-auto-summary-enabled" {{#if autoSummaryEnabled}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_AutoSummaryEnabled">Auto-create memory summaries</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_AutoSummaryDesc;[title]STMemoryBooks_AutoSummaryWarnTooltip" title="Warning: enabling Auto-Summary may create one large memory from the existing backlog. Use /stmb-set-highest &lt;N|none&gt; to control the baseline.">Automatically run /nextmemory after a specified number of messages.</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-auto-summary-interval">
+                <h4 data-i18n="STMemoryBooks_AutoSummaryInterval">Auto-Summary Interval:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_AutoSummaryIntervalDesc">Number of messages after which to automatically create a memory summary.</small>
+                <input type="number" id="stmb-auto-summary-interval" class="text_pole"
+                    value="{{autoSummaryInterval}}" min="10" max="200" step="1"
+                    placeholder="50">
+            </label>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-auto-summary-buffer">
+                <h4 data-i18n="STMemoryBooks_AutoSummaryBuffer">Auto-Summary Buffer:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_AutoSummaryBufferDesc">Delay auto-summary by X messages (belated generation). Default 2, max 50.</small>
+                <input type="number" id="stmb-auto-summary-buffer" class="text_pole"
+                    value="{{autoSummaryBuffer}}" min="0" max="50" step="1" placeholder="0">
+            </label>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-auto-consolidation-prompt-enabled" {{#if autoConsolidationPromptEnabled}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_AutoConsolidationEnabled">Prompt for consolidation when a tier is ready</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_AutoConsolidationDesc">Shows a yes/no prompt when any selected summary tier has enough eligible source entries. Uses each tier's saved minimum.</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-auto-consolidation-target-tier">
+                <h4 data-i18n="STMemoryBooks_AutoConsolidationTier">Auto-Consolidation Tiers:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_AutoConsolidationTierDesc">Choose which summary tiers should trigger the confirmation prompt.</small>
+            </label>
+        </div>
+
+        <select id="stmb-auto-consolidation-target-tier" class="text_pole" multiple size="6">
+            {{#each autoConsolidationTierOptions}}
+            <option value="{{value}}" {{#if isSelected}}selected{{/if}}>{{label}}</option>
+            {{/each}}
+        </select>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-default-memory-count">
+                <h4 data-i18n="STMemoryBooks_DefaultMemoryCount">Default Previous Memories Count:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_DefaultMemoryCountDesc">Default number of previous memories to include as context when creating new memories.</small>
+                <select id="stmb-default-memory-count" class="text_pole">
+                    <option value="0" {{#if (eq defaultMemoryCount 0)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount0">None (0 memories)</option>
+                    <option value="1" {{#if (eq defaultMemoryCount 1)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount1">Last 1 memory</option>
+                    <option value="2" {{#if (eq defaultMemoryCount 2)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount2">Last 2 memories</option>
+                    <option value="3" {{#if (eq defaultMemoryCount 3)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount3">Last 3 memories</option>
+                    <option value="4" {{#if (eq defaultMemoryCount 4)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount4">Last 4 memories</option>
+                    <option value="5" {{#if (eq defaultMemoryCount 5)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount5">Last 5 memories</option>
+                    <option value="6" {{#if (eq defaultMemoryCount 6)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount6">Last 6 memories</option>
+                    <option value="7" {{#if (eq defaultMemoryCount 7)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount7">Last 7 memories</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <div class="stmb-settings-panel" data-stmb-panel="memory" role="tabpanel">
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CurrentLorebookConfig">Current Lorebook Configuration</h3>
+
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-manual-mode-enabled" {{#if manualModeEnabled}}checked{{/if}} {{#if autoCreateLorebook}}disabled{{/if}}>
+                <span data-i18n="STMemoryBooks_EnableManualMode">Enable Manual Lorebook Mode</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_ManualModeDesc">When enabled, you must specify a lorebook for memories instead of using the one bound to the chat.</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-auto-create-lorebook" {{#if autoCreateLorebook}}checked{{/if}} {{#if manualModeEnabled}}disabled{{/if}}>
+                <span data-i18n="STMemoryBooks_AutoCreateLorebook">Auto-create lorebook if none exists</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_AutoCreateLorebookDesc">When enabled, automatically creates and binds a lorebook to the chat if none exists.</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-lorebook-name-template">
+                <h4 data-i18n="STMemoryBooks_LorebookNameTemplate">Lorebook Name Template:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_LorebookNameTemplateDesc">Template for auto-created lorebook names. Supports {{char}}, {{user}}, {{chat}} placeholders.</small>
+                <input type="text" id="stmb-lorebook-name-template" class="text_pole"
+                    value="{{lorebookNameTemplate}}" data-i18n="[placeholder]STMemoryBooks_LorebookNameTemplatePlaceholder"
+                    placeholder="LTM - {{char}} - {{chat}}"
+                    {{#unless autoCreateLorebook}}disabled{{/unless}}>
+            </label>
+        </div>
+
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_TokenSaving">Token Saving (Hide/Unhide Messages)</h3>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-auto-hide-mode">
+                <h4 data-i18n="STMemoryBooks_AutoHideMode">Auto-hide messages after adding memory:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_AutoHideModeDesc">Choose what messages to automatically hide after creating a memory.</small>
+                <select id="stmb-auto-hide-mode" class="text_pole">
+                    <option value="none" {{#if (eq autoHideMode "none")}}selected{{/if}} data-i18n="STMemoryBooks_AutoHideNone">Do not auto-hide</option>
+                    <option value="all" {{#if (eq autoHideMode "all")}}selected{{/if}} data-i18n="STMemoryBooks_AutoHideAll">Auto-hide all messages up to the last memory</option>
+                    <option value="last" {{#if (eq autoHideMode "last")}}selected{{/if}} data-i18n="STMemoryBooks_AutoHideLast">Auto-hide only messages in the last memory</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-unhidden-entries-count">
+                <h4 data-i18n="STMemoryBooks_UnhiddenCount">Messages to leave unhidden:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_UnhiddenCountDesc">Number of recent messages to leave visible when auto-hiding (0 = hide all up to scene end)</small>
+                <input type="number" id="stmb-unhidden-entries-count" class="text_pole"
+                    value="{{unhiddenEntriesCount}}" min="0" max="50" step="1"
+                    placeholder="2">
+            </label>
+        </div>
+        
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-unhide-before-memory" {{#if unhideBeforeMemory}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_UnhideBeforeMemory">Unhide hidden messages for memory generation (runs /unhide X-Y)</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="stmb-settings-panel" data-stmb-panel="profiles" role="tabpanel">
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_Profiles">Memory Profiles:</h3>
+
+            <div class="world_entry_form_control">
+            <h4 data-i18n="STMemoryBooks_TitleFormat">Memory Title Format:</h4>
+            <select id="stmb-title-format-select" class="text_pole">
+                {{#each titleFormats}}
+                <option value="{{value}}" {{#if isSelected}}selected{{/if}}>{{value}}</option>
+                {{/each}}
+                <option value="custom" {{#if isCustomTitleFormat}}selected{{/if}} data-i18n="STMemoryBooks_CustomTitleFormat">Custom Title Format...</option>
+            </select>
+            <input type="text" id="stmb-custom-title-format" class="text_pole marginTop5 {{#unless showCustomInput}}displayNone{{/unless}}"
+                data-i18n="[placeholder]STMemoryBooks_EnterCustomFormat" placeholder="Enter custom format" value="{{titleFormat}}">
+            <small class="opacity50p" data-i18n="STMemoryBooks_TitleFormatDesc">Use [0], [00], [000] for auto-numbering. Available: \{{title}}, \{{scene}}, &#123;&#123;char}}, &#123;&#123;user}}, \{{messages}}, \{{profile}}, &#123;&#123;date}}, &#123;&#123;time}}</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <select id="stmb-profile-select" class="text_pole">
+                {{#each profiles}}
+                <option value="{{@index}}" {{#if isDefault}}selected{{/if}}>{{name}}{{#if isDefault}} (Default){{/if}}</option>
+                {{/each}}
+            </select>
+        </div>
+
+        <div id="stmb-profile-summary" class="padding10 marginBot10">
+            <div class="marginBot5" data-i18n="STMemoryBooks_ProfileSettings">Profile Settings:</div>
+            <div><span data-i18n="STMemoryBooks_Provider">Provider</span>: <span id="stmb-summary-api">{{selectedProfile.connection.api}}</span></div>
+            <div><span data-i18n="STMemoryBooks_Model">Model</span>: <span id="stmb-summary-model">{{selectedProfile.connection.model}}</span></div>
+            <div><span data-i18n="STMemoryBooks_Temperature">Temperature</span>: <span id="stmb-summary-temp">{{selectedProfile.connection.temperature}}</span></div>
+            <div><span data-i18n="STMemoryBooks_TitleFormat">Title Format</span>: <span id="stmb-summary-title">{{selectedProfile.titleFormat}}</span></div>
+            <details class="marginTop10">
+                <summary data-i18n="STMemoryBooks_ViewPrompt">View Prompt</summary>
+                <div class="padding10 marginTop5 stmb-box">
+                    <pre><code id="stmb-summary-prompt">{{selectedProfile.effectivePrompt}}</code></pre>
+                </div>
+            </details>
+        </div>
+
+        <h4 class="stmb-section-title" data-i18n="STMemoryBooks_ProfileActions">Profile Actions:</h4>
+        <div class="buttons_block marginTop5 justifyCenter gap10px whitespacenowrap" id="stmb-profile-buttons">
+            <!-- Profile buttons will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <div class="stmb-settings-panel" data-stmb-panel="advanced" role="tabpanel">
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_Preferences">Preferences:</h3>
 
         <div class="world_entry_form_control">
@@ -102,23 +358,6 @@ export const settingsTemplate = Handlebars.compile(`
             </label>
         </div>
 
-        <div class="world_entry_form_control">
-            <label for="stmb-default-memory-count">
-                <h4 data-i18n="STMemoryBooks_DefaultMemoryCount">Default Previous Memories Count:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_DefaultMemoryCountDesc">Default number of previous memories to include as context when creating new memories.</small>
-                <select id="stmb-default-memory-count" class="text_pole">
-                    <option value="0" {{#if (eq defaultMemoryCount 0)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount0">None (0 memories)</option>
-                    <option value="1" {{#if (eq defaultMemoryCount 1)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount1">Last 1 memory</option>
-                    <option value="2" {{#if (eq defaultMemoryCount 2)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount2">Last 2 memories</option>
-                    <option value="3" {{#if (eq defaultMemoryCount 3)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount3">Last 3 memories</option>
-                    <option value="4" {{#if (eq defaultMemoryCount 4)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount4">Last 4 memories</option>
-                    <option value="5" {{#if (eq defaultMemoryCount 5)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount5">Last 5 memories</option>
-                    <option value="6" {{#if (eq defaultMemoryCount 6)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount6">Last 6 memories</option>
-                    <option value="7" {{#if (eq defaultMemoryCount 7)}}selected{{/if}} data-i18n="STMemoryBooks_MemoryCount7">Last 7 memories</option>
-                </select>
-            </label>
-        </div>
-
         <hr class="marginTop10 marginBot10">
 
         <div class="world_entry_form_control" class="flex-container">
@@ -136,226 +375,6 @@ export const settingsTemplate = Handlebars.compile(`
             <small class="opacity70p" data-i18n="STMemoryBooks_RegexSelection_Desc">Selecting a regex here will run it REGARDLESS of whether it is enabled or disabled.</small>
         </div>
 
-        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CurrentLorebookConfig">Current Lorebook Configuration</h3>
-
-        <div class="info-block">
-            <small class="opacity50p" data-i18n="STMemoryBooks_Mode">Mode:</small>
-            <h5 id="stmb-mode-badge">{{lorebookMode}}</h5>
-
-            <small class="opacity50p" data-i18n="STMemoryBooks_ActiveLorebook">Active Lorebook:</small>
-            <h5 id="stmb-active-lorebook" class="{{#unless currentLorebookName}}opacity50p{{/unless}}">
-                {{#if currentLorebookName}}
-                    {{currentLorebookName}}
-                {{else}}
-                    <span data-i18n="STMemoryBooks_NoneSelected">None selected</span>
-                {{/if}}
-            </h5>
-
-            <div id="stmb-manual-controls" style="display: {{#if manualModeEnabled}}block{{else}}none{{/if}};">
-                <div class="buttons_block marginTop5 justifyCenter gap10px whitespacenowrap" id="stmb-manual-lorebook-buttons">
-                    <!-- Manual lorebook buttons will be dynamically inserted here -->
-                </div>
-            </div>
-
-            <div id="stmb-automatic-info" class="marginTop5" style="display: {{#if manualModeEnabled}}none{{else}}block{{/if}};">
-                <small class="opacity50p">
-                    {{#if chatBoundLorebookName}}
-                        <span data-i18n="STMemoryBooks_UsingChatBound">Using chat-bound lorebook</span> "{{chatBoundLorebookName}}"
-                    {{else}}
-                        <span data-i18n="STMemoryBooks_NoChatBound">No chat-bound lorebook. Memories will require lorebook selection.</span>
-                    {{/if}}
-                </small>
-            </div>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label class="checkbox_label">
-                <input type="checkbox" id="stmb-manual-mode-enabled" {{#if manualModeEnabled}}checked{{/if}} {{#if autoCreateLorebook}}disabled{{/if}}>
-                <span data-i18n="STMemoryBooks_EnableManualMode">Enable Manual Lorebook Mode</span>
-            </label>
-            <small class="opacity50p" data-i18n="STMemoryBooks_ManualModeDesc">When enabled, you must specify a lorebook for memories instead of using the one bound to the chat.</small>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label class="checkbox_label">
-                <input type="checkbox" id="stmb-auto-create-lorebook" {{#if autoCreateLorebook}}checked{{/if}} {{#if manualModeEnabled}}disabled{{/if}}>
-                <span data-i18n="STMemoryBooks_AutoCreateLorebook">Auto-create lorebook if none exists</span>
-            </label>
-            <small class="opacity50p" data-i18n="STMemoryBooks_AutoCreateLorebookDesc">When enabled, automatically creates and binds a lorebook to the chat if none exists.</small>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label for="stmb-lorebook-name-template">
-                <h4 data-i18n="STMemoryBooks_LorebookNameTemplate">Lorebook Name Template:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_LorebookNameTemplateDesc">Template for auto-created lorebook names. Supports {{char}}, {{user}}, {{chat}} placeholders.</small>
-                <input type="text" id="stmb-lorebook-name-template" class="text_pole"
-                    value="{{lorebookNameTemplate}}" data-i18n="[placeholder]STMemoryBooks_LorebookNameTemplatePlaceholder"
-                    placeholder="LTM - {{char}} - {{chat}}"
-                    {{#unless autoCreateLorebook}}disabled{{/unless}}>
-            </label>
-        </div>
-
-        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_TokenSaving">Token Saving (Hide/Unhide Messages)</h3>
-
-        <div class="world_entry_form_control">
-            <label for="stmb-auto-hide-mode">
-                <h4 data-i18n="STMemoryBooks_AutoHideMode">Auto-hide messages after adding memory:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_AutoHideModeDesc">Choose what messages to automatically hide after creating a memory.</small>
-                <select id="stmb-auto-hide-mode" class="text_pole">
-                    <option value="none" {{#if (eq autoHideMode "none")}}selected{{/if}} data-i18n="STMemoryBooks_AutoHideNone">Do not auto-hide</option>
-                    <option value="all" {{#if (eq autoHideMode "all")}}selected{{/if}} data-i18n="STMemoryBooks_AutoHideAll">Auto-hide all messages up to the last memory</option>
-                    <option value="last" {{#if (eq autoHideMode "last")}}selected{{/if}} data-i18n="STMemoryBooks_AutoHideLast">Auto-hide only messages in the last memory</option>
-                </select>
-            </label>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label for="stmb-unhidden-entries-count">
-                <h4 data-i18n="STMemoryBooks_UnhiddenCount">Messages to leave unhidden:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_UnhiddenCountDesc">Number of recent messages to leave visible when auto-hiding (0 = hide all up to scene end)</small>
-                <input type="number" id="stmb-unhidden-entries-count" class="text_pole"
-                    value="{{unhiddenEntriesCount}}" min="0" max="50" step="1"
-                    placeholder="2">
-            </label>
-        </div>
-        
-        <div class="world_entry_form_control">
-            <label class="checkbox_label">
-                <input type="checkbox" id="stmb-unhide-before-memory" {{#if unhideBeforeMemory}}checked{{/if}}>
-                <span data-i18n="STMemoryBooks_UnhideBeforeMemory">Unhide hidden messages for memory generation (runs /unhide X-Y)</span>
-            </label>
-        </div>
-
-        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_RpgCampaignMemory">RPG Campaign Memory</h3>
-
-        <div class="world_entry_form_control">
-            <label class="checkbox_label">
-                <input type="checkbox" id="stmb-rpg-memory-mode-enabled" {{#if rpgMemoryModeEnabled}}checked{{/if}}>
-                <span data-i18n="STMemoryBooks_RpgMemoryModeEnabled">Enable automatic RPG campaign memory mode</span>
-            </label>
-            <small class="opacity50p" data-i18n="STMemoryBooks_RpgMemoryModeDesc">Uses Auto-Summary as the first campaign memory engine while RPG-specific memory tools are added.</small>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label for="stmb-rpg-automation-policy">
-                <h4 data-i18n="STMemoryBooks_RpgAutomationPolicy">Automation Policy:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_RpgAutomationPolicyDesc">Choose whether campaign memory updates happen silently or wait for review.</small>
-                <select id="stmb-rpg-automation-policy" class="text_pole" {{#unless rpgMemoryModeEnabled}}disabled{{/unless}}>
-                    {{#each rpgAutomationPolicyOptions}}
-                    <option value="{{value}}" {{#if isSelected}}selected{{/if}}>{{label}}</option>
-                    {{/each}}
-                </select>
-            </label>
-        </div>
-
-        <div id="stmb-rpg-memory-status" class="info-block stmb-rpg-memory-status">
-            <strong data-i18n="STMemoryBooks_RpgStatusTitle">RPG status</strong>
-            <div class="stmb-rpg-status-grid">
-                <span data-i18n="STMemoryBooks_RpgStatusMode">Mode</span>
-                <span id="stmb-rpg-status-mode">{{rpgMemoryStatus.modeLabel}}</span>
-                <span data-i18n="STMemoryBooks_RpgStatusPolicy">Policy</span>
-                <span id="stmb-rpg-status-policy">{{rpgMemoryStatus.policyLabel}}</span>
-                <span data-i18n="STMemoryBooks_RpgStatusInterval">Interval</span>
-                <span><span id="stmb-rpg-status-interval">{{rpgMemoryStatus.interval}}</span> <span data-i18n="STMemoryBooks_RpgStatusMessages">messages</span></span>
-                <span data-i18n="STMemoryBooks_RpgStatusBuffer">Buffer</span>
-                <span><span id="stmb-rpg-status-buffer">{{rpgMemoryStatus.buffer}}</span> <span data-i18n="STMemoryBooks_RpgStatusMessages">messages</span></span>
-                <span data-i18n="STMemoryBooks_RpgStatusLastProcessed">Last processed</span>
-                <span id="stmb-rpg-status-last-processed">{{rpgMemoryStatus.lastProcessedLabel}}</span>
-            </div>
-        </div>
-
-        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_AutoMemory">Automatic Memories</h3>
-
-        <div class="world_entry_form_control">
-            <label class="checkbox_label">
-                <input type="checkbox" id="stmb-auto-summary-enabled" {{#if autoSummaryEnabled}}checked{{/if}}>
-                <span data-i18n="STMemoryBooks_AutoSummaryEnabled">Auto-create memory summaries</span>
-            </label>
-            <small class="opacity50p" data-i18n="STMemoryBooks_AutoSummaryDesc;[title]STMemoryBooks_AutoSummaryWarnTooltip" title="Warning: enabling Auto-Summary may create one large memory from the existing backlog. Use /stmb-set-highest &lt;N|none&gt; to control the baseline.">Automatically run /nextmemory after a specified number of messages.</small>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label for="stmb-auto-summary-interval">
-                <h4 data-i18n="STMemoryBooks_AutoSummaryInterval">Auto-Summary Interval:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_AutoSummaryIntervalDesc">Number of messages after which to automatically create a memory summary.</small>
-                <input type="number" id="stmb-auto-summary-interval" class="text_pole"
-                    value="{{autoSummaryInterval}}" min="10" max="200" step="1"
-                    placeholder="50">
-            </label>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label for="stmb-auto-summary-buffer">
-                <h4 data-i18n="STMemoryBooks_AutoSummaryBuffer">Auto-Summary Buffer:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_AutoSummaryBufferDesc">Delay auto-summary by X messages (belated generation). Default 2, max 50.</small>
-                <input type="number" id="stmb-auto-summary-buffer" class="text_pole"
-                    value="{{autoSummaryBuffer}}" min="0" max="50" step="1" placeholder="0">
-            </label>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label class="checkbox_label">
-                <input type="checkbox" id="stmb-auto-consolidation-prompt-enabled" {{#if autoConsolidationPromptEnabled}}checked{{/if}}>
-                <span data-i18n="STMemoryBooks_AutoConsolidationEnabled">Prompt for consolidation when a tier is ready</span>
-            </label>
-            <small class="opacity50p" data-i18n="STMemoryBooks_AutoConsolidationDesc">Shows a yes/no prompt when any selected summary tier has enough eligible source entries. Uses each tier's saved minimum.</small>
-        </div>
-
-        <div class="world_entry_form_control">
-            <label for="stmb-auto-consolidation-target-tier">
-                <h4 data-i18n="STMemoryBooks_AutoConsolidationTier">Auto-Consolidation Tiers:</h4>
-                <small class="opacity50p" data-i18n="STMemoryBooks_AutoConsolidationTierDesc">Choose which summary tiers should trigger the confirmation prompt.</small>
-            </label>
-        </div>
-
-        <select id="stmb-auto-consolidation-target-tier" class="text_pole" multiple size="6">
-            {{#each autoConsolidationTierOptions}}
-            <option value="{{value}}" {{#if isSelected}}selected{{/if}}>{{label}}</option>
-            {{/each}}
-        </select>
-
-        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_Profiles">Memory Profiles:</h3>
-
-            <div class="world_entry_form_control">
-            <h4 data-i18n="STMemoryBooks_TitleFormat">Memory Title Format:</h4>
-            <select id="stmb-title-format-select" class="text_pole">
-                {{#each titleFormats}}
-                <option value="{{value}}" {{#if isSelected}}selected{{/if}}>{{value}}</option>
-                {{/each}}
-                <option value="custom" {{#if isCustomTitleFormat}}selected{{/if}} data-i18n="STMemoryBooks_CustomTitleFormat">Custom Title Format...</option>
-            </select>
-            <input type="text" id="stmb-custom-title-format" class="text_pole marginTop5 {{#unless showCustomInput}}displayNone{{/unless}}"
-                data-i18n="[placeholder]STMemoryBooks_EnterCustomFormat" placeholder="Enter custom format" value="{{titleFormat}}">
-            <small class="opacity50p" data-i18n="STMemoryBooks_TitleFormatDesc">Use [0], [00], [000] for auto-numbering. Available: \{{title}}, \{{scene}}, &#123;&#123;char}}, &#123;&#123;user}}, \{{messages}}, \{{profile}}, &#123;&#123;date}}, &#123;&#123;time}}</small>
-        </div>
-
-        <div class="world_entry_form_control">
-            <select id="stmb-profile-select" class="text_pole">
-                {{#each profiles}}
-                <option value="{{@index}}" {{#if isDefault}}selected{{/if}}>{{name}}{{#if isDefault}} (Default){{/if}}</option>
-                {{/each}}
-            </select>
-        </div>
-
-        <div id="stmb-profile-summary" class="padding10 marginBot10">
-            <div class="marginBot5" data-i18n="STMemoryBooks_ProfileSettings">Profile Settings:</div>
-            <div><span data-i18n="STMemoryBooks_Provider">Provider</span>: <span id="stmb-summary-api">{{selectedProfile.connection.api}}</span></div>
-            <div><span data-i18n="STMemoryBooks_Model">Model</span>: <span id="stmb-summary-model">{{selectedProfile.connection.model}}</span></div>
-            <div><span data-i18n="STMemoryBooks_Temperature">Temperature</span>: <span id="stmb-summary-temp">{{selectedProfile.connection.temperature}}</span></div>
-            <div><span data-i18n="STMemoryBooks_TitleFormat">Title Format</span>: <span id="stmb-summary-title">{{selectedProfile.titleFormat}}</span></div>
-            <details class="marginTop10">
-                <summary data-i18n="STMemoryBooks_ViewPrompt">View Prompt</summary>
-                <div class="padding10 marginTop5 stmb-box">
-                    <pre><code id="stmb-summary-prompt">{{selectedProfile.effectivePrompt}}</code></pre>
-                </div>
-            </details>
-        </div>
-
-        <h4 class="stmb-section-title" data-i18n="STMemoryBooks_ProfileActions">Profile Actions:</h4>
-        <div class="buttons_block marginTop5 justifyCenter gap10px whitespacenowrap" id="stmb-profile-buttons">
-            <!-- Profile buttons will be dynamically inserted here -->
-        </div>
-
         <h4 class="stmb-section-title" data-i18n="STMemoryBooks_extraFunctionButtons">Extra Function Buttons:</h4>
         <input type="file" id="stmb-import-file" accept=".json" class="displayNone">
         <div class="buttons_block marginTop5 justifyCenter gap10px whitespacenowrap" id="stmb-extra-function-buttons">
@@ -370,6 +389,7 @@ export const settingsTemplate = Handlebars.compile(`
                 <!-- prompt manager buttons will be dynamically inserted here -->
             </div>
         </div>
+    </div>
 
 `);
 

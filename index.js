@@ -451,6 +451,7 @@ let lastArcFailureToast = null;
 let lastFailedArcContext = null;
 let memoryBoundaryButton = null;
 let memoryBoundaryButtonDragState = null;
+let currentSettingsTab = "campaign";
 
 function normalizeMemoryBoundaryMode(mode) {
   const value = String(mode ?? DEFAULT_MEMORY_BOUNDARY_MODE);
@@ -3914,6 +3915,27 @@ function updateRpgMemoryStatusDisplay() {
   setText("#stmb-rpg-status-last-processed", status.lastProcessedLabel);
 }
 
+function activateSettingsTab(tabName = currentSettingsTab) {
+  if (!currentPopupInstance?.dlg) return;
+
+  const popupElement = currentPopupInstance.dlg;
+  const availableTabs = Array.from(
+    popupElement.querySelectorAll(".stmb-settings-tab"),
+  ).map((tab) => tab.dataset.stmbTab);
+  const nextTab = availableTabs.includes(tabName) ? tabName : "campaign";
+  currentSettingsTab = nextTab;
+
+  popupElement.querySelectorAll(".stmb-settings-tab").forEach((tab) => {
+    const isActive = tab.dataset.stmbTab === nextTab;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
+
+  popupElement.querySelectorAll(".stmb-settings-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.stmbPanel === nextTab);
+  });
+}
+
 /**
  * Populate inline button containers with dynamic buttons (profile and manual lorebook buttons)
  */
@@ -6981,6 +7003,7 @@ async function showSettingsPopup() {
     );
     markStmbPopup(currentPopupInstance);
     setupSettingsEventListeners();
+    activateSettingsTab(currentSettingsTab);
     populateInlineButtons();
     initializeSettingsPopupSelect2();
     await currentPopupInstance.show();
@@ -7001,6 +7024,12 @@ function setupSettingsEventListeners() {
   // Use full event delegation for all interactions
   popupElement.addEventListener("click", async (e) => {
     const settings = initializeSettings();
+    const tabButton = e.target?.closest?.(".stmb-settings-tab");
+    if (tabButton) {
+      e.preventDefault();
+      activateSettingsTab(tabButton.dataset.stmbTab);
+      return;
+    }
 
     // Regex selection button (visible only when "Use regex" is checked)
     if (e.target && e.target.matches("#stmb-configure-regex")) {
@@ -7950,6 +7979,7 @@ async function refreshPopupContent() {
     currentPopupInstance.content.style.overflowY = "auto";
 
     // Repopulate profile buttons after content refresh
+    activateSettingsTab(currentSettingsTab);
     populateInlineButtons();
     initializeSettingsPopupSelect2();
   } catch (error) {
