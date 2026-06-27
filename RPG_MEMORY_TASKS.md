@@ -115,6 +115,13 @@ Goal: trigger RPG memory generation from meaningful campaign events rather than 
   - [x] relationship shift
   - [x] location/time transition
   - [x] user importance signal
+- [x] Add first-pass Scene Scratchpad delta triggers:
+  - [x] scene state changes
+  - [x] active thread changes
+  - [x] parallel storyline changes
+  - [x] character knowledge changes
+  - [x] relationship/read-of-user changes
+  - [x] cutaway and narrator note changes
 - [x] Store last content-trigger check position per chat.
 - [x] Add minimum cooldown so trigger checks cannot spam memory generation.
 - [x] Keep fixed interval as a fallback max interval.

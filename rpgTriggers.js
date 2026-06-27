@@ -47,11 +47,267 @@ const TRIGGER_PATTERNS = [
     },
 ];
 
+const SCRATCHPAD_SECTION_RULES = [
+    {
+        key: 'scene_state',
+        label: 'Scene State',
+        weight: 4,
+        memoryType: 'scratchpad_scene_state',
+        reason: 'Scratchpad scene state changed',
+    },
+    {
+        key: 'active_threads',
+        label: 'Active Threads & Stakes',
+        aliases: ['Active Threads &amp; Stakes'],
+        weight: 4,
+        memoryType: 'scratchpad_thread_update',
+        reason: 'Scratchpad active threads changed',
+    },
+    {
+        key: 'parallel_storylines',
+        label: 'Parallel Storylines',
+        weight: 4,
+        memoryType: 'scratchpad_parallel_storyline',
+        reason: 'Scratchpad parallel storyline changed',
+    },
+    {
+        key: 'knowledge',
+        label: 'Knowledge',
+        repeated: true,
+        weight: 3,
+        memoryType: 'scratchpad_knowledge_update',
+        reason: 'Scratchpad character knowledge changed',
+    },
+    {
+        key: 'read_of_user',
+        label: 'Their read of <user>',
+        aliases: ['Their read of user', 'Their read of'],
+        repeated: true,
+        weight: 3,
+        memoryType: 'scratchpad_relationship_update',
+        reason: 'Scratchpad relationship read changed',
+    },
+    {
+        key: 'next_cutaway',
+        label: 'Next Cutaway Candidate',
+        weight: 2,
+        memoryType: 'scratchpad_cutaway_update',
+        reason: 'Scratchpad cutaway candidate changed',
+    },
+    {
+        key: 'narrator_notes',
+        label: 'Narrator Notes',
+        weight: 2,
+        memoryType: 'scratchpad_narrator_note',
+        reason: 'Scratchpad narrator notes changed',
+    },
+];
+
+const SCRATCHPAD_LABELS = [
+    'Emotional State',
+    'Knowledge',
+    'Their read of <user>',
+    'Their read of user',
+    'Scene State',
+    'Active Threads & Stakes',
+    'Active Threads &amp; Stakes',
+    'Parallel Storylines',
+    'Next Cutaway Candidate',
+    'Narrator Notes',
+];
+
 function getMessageText(message) {
     if (!message || typeof message !== 'object') {
         return '';
     }
     return String(message.mes || message.message || message.text || '').trim();
+}
+
+function isAssistantMessage(message) {
+    return !!message && typeof message === 'object' && message.is_user !== true;
+}
+
+function decodeEntities(text) {
+    return String(text || '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+}
+
+function stripHtml(text) {
+    return decodeEntities(String(text || '')
+        .replace(/<user>/gi, 'user')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|details|summary|li|h[1-6])>/gi, '\n')
+        .replace(/<[^>]*>/g, ' '));
+}
+
+function normalizeComparableText(text) {
+    return stripHtml(text)
+        .replace(/\[[^\]]*]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function extractScratchpadText(rawText) {
+    const text = String(rawText || '');
+    const markerIndex = text.toLowerCase().lastIndexOf('scene scratchpad');
+    if (markerIndex < 0) {
+        return '';
+    }
+
+    const detailsStart = text.toLowerCase().lastIndexOf('<details', markerIndex);
+    const divStart = text.toLowerCase().lastIndexOf('<div', markerIndex);
+    const start = Math.max(detailsStart, divStart, 0);
+    return stripHtml(text.slice(start));
+}
+
+function findNextLabelIndex(text, startIndex) {
+    const lower = text.toLowerCase();
+    let nextIndex = -1;
+    for (const label of SCRATCHPAD_LABELS) {
+        const index = lower.indexOf(`${label.toLowerCase()}:`, startIndex);
+        if (index >= 0 && (nextIndex < 0 || index < nextIndex)) {
+            nextIndex = index;
+        }
+    }
+    return nextIndex;
+}
+
+function extractLabelValues(text, labels, repeated = false) {
+    const values = [];
+    const lower = text.toLowerCase();
+    const candidates = labels.map((label) => `${label.toLowerCase()}:`);
+
+    for (const candidate of candidates) {
+        let searchFrom = 0;
+        while (searchFrom < lower.length) {
+            const index = lower.indexOf(candidate, searchFrom);
+            if (index < 0) {
+                break;
+            }
+
+            const valueStart = index + candidate.length;
+            const nextLabel = findNextLabelIndex(text, valueStart);
+            const valueEnd = nextLabel >= 0 ? nextLabel : text.length;
+            const value = normalizeComparableText(text.slice(valueStart, valueEnd));
+            if (value) {
+                values.push(value);
+            }
+
+            if (!repeated) {
+                break;
+            }
+            searchFrom = valueEnd;
+        }
+    }
+
+    return repeated ? values.join(' | ') : values[0] || '';
+}
+
+function parseScratchpad(rawText) {
+    const scratchpadText = extractScratchpadText(rawText);
+    if (!scratchpadText) {
+        return null;
+    }
+
+    const sections = {};
+    for (const rule of SCRATCHPAD_SECTION_RULES) {
+        const labels = [rule.label, ...(rule.aliases || [])];
+        sections[rule.key] = extractLabelValues(scratchpadText, labels, !!rule.repeated);
+    }
+
+    return { sections };
+}
+
+function tokenSimilarity(a, b) {
+    const left = new Set(String(a || '').split(/\s+/).filter(Boolean));
+    const right = new Set(String(b || '').split(/\s+/).filter(Boolean));
+    if (left.size === 0 && right.size === 0) {
+        return 1;
+    }
+    let intersection = 0;
+    for (const token of left) {
+        if (right.has(token)) {
+            intersection += 1;
+        }
+    }
+    const union = new Set([...left, ...right]).size;
+    return union > 0 ? intersection / union : 0;
+}
+
+function hasMeaningfulSectionChange(previousValue, currentValue) {
+    if (!currentValue || currentValue.length < 12) {
+        return false;
+    }
+    if (!previousValue) {
+        return currentValue.length >= 30;
+    }
+    if (previousValue === currentValue) {
+        return false;
+    }
+
+    const lengthDelta = Math.abs(currentValue.length - previousValue.length);
+    return lengthDelta >= 35 || tokenSimilarity(previousValue, currentValue) < 0.82;
+}
+
+function findRecentScratchpads(sceneStart, safeEnd) {
+    const scratchpads = [];
+    const lookbackStart = Math.max(0, sceneStart - 20);
+    for (let index = safeEnd; index >= lookbackStart && scratchpads.length < 3; index -= 1) {
+        const message = chat[index];
+        if (!isAssistantMessage(message)) {
+            continue;
+        }
+        const parsed = parseScratchpad(getMessageText(message));
+        if (parsed) {
+            scratchpads.push({ index, ...parsed });
+        }
+    }
+    return scratchpads.reverse();
+}
+
+function evaluateScratchpadTrigger(sceneStart, safeEnd) {
+    const scratchpads = findRecentScratchpads(sceneStart, safeEnd);
+    if (scratchpads.length < 2) {
+        return null;
+    }
+
+    const current = scratchpads[scratchpads.length - 1];
+    if (current.index < sceneStart) {
+        return null;
+    }
+    const previous = scratchpads[scratchpads.length - 2];
+    const changes = [];
+    let score = 0;
+
+    for (const rule of SCRATCHPAD_SECTION_RULES) {
+        const previousValue = previous.sections[rule.key] || '';
+        const currentValue = current.sections[rule.key] || '';
+        if (hasMeaningfulSectionChange(previousValue, currentValue)) {
+            changes.push(rule);
+            score += rule.weight;
+        }
+    }
+
+    if (score < 4) {
+        return null;
+    }
+
+    changes.sort((a, b) => b.weight - a.weight);
+    const primary = changes[0];
+    const changedLabels = changes.slice(0, 3).map((change) => change.label).join(', ');
+    return {
+        confidence: Math.min(0.96, 0.5 + (score * 0.08)),
+        urgency: score >= 7 ? 'high' : 'normal',
+        reason: `${primary.reason}: ${changedLabels}`,
+        memoryType: primary.memoryType,
+        reviewRequired: score >= 7,
+        scratchpadMessage: current.index,
+    };
 }
 
 function normalizeTriggerSettings(settings) {
@@ -112,6 +368,21 @@ export function evaluateRpgContentTrigger(settings, stmbData, highestProcessed, 
     const checkStart = Math.max(sceneStart, safeEnd - triggerSettings.checkCadence + 1);
     const recentText = buildRecentText(checkStart, safeEnd);
     stmbData.rpgContentLastCheckMessage = safeEnd;
+
+    const scratchpadTrigger = evaluateScratchpadTrigger(sceneStart, safeEnd);
+    if (scratchpadTrigger) {
+        return {
+            shouldCreateMemory: true,
+            checked: true,
+            confidence: scratchpadTrigger.confidence,
+            urgency: scratchpadTrigger.urgency,
+            reason: scratchpadTrigger.reason,
+            memoryType: scratchpadTrigger.memoryType,
+            sceneStart,
+            sceneEnd: safeEnd,
+            reviewRequired: scratchpadTrigger.reviewRequired,
+        };
+    }
 
     if (!recentText) {
         return { shouldCreateMemory: false, checked: true };
