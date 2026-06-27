@@ -536,6 +536,48 @@ function getRpgAutomationPolicyOptions(selectedPolicy) {
   }));
 }
 
+function getRpgAutomationPolicyLabel(policy) {
+  const normalized = normalizeRpgAutomationPolicy(policy);
+  const match = getRpgAutomationPolicyOptions(normalized).find(
+    (option) => option.value === normalized,
+  );
+  return match?.label || normalized;
+}
+
+function getRpgMemoryStatus(settings, sceneMarkers = null) {
+  const moduleSettings = settings?.moduleSettings || settings || {};
+  const markers = sceneMarkers || getSceneMarkers() || {};
+  const enabled = !!moduleSettings.rpgMemoryModeEnabled;
+  const policy = normalizeRpgAutomationPolicy(moduleSettings.rpgAutomationPolicy);
+  const interval = clampInt(
+    Number.parseInt(moduleSettings.autoSummaryInterval ?? 50, 10) || 50,
+    10,
+    200,
+  );
+  const buffer = clampInt(
+    Number.parseInt(moduleSettings.autoSummaryBuffer ?? 2, 10) || 0,
+    0,
+    50,
+  );
+  const highestMemoryProcessed = markers.highestMemoryProcessed;
+  const hasHighestMemoryProcessed = Number.isFinite(highestMemoryProcessed);
+
+  return {
+    enabled,
+    modeLabel: enabled
+      ? translate("Enabled", "STMemoryBooks_RpgStatusEnabled")
+      : translate("Disabled", "STMemoryBooks_RpgStatusDisabled"),
+    policyLabel: getRpgAutomationPolicyLabel(policy),
+    interval,
+    buffer,
+    hasHighestMemoryProcessed,
+    highestMemoryProcessed,
+    lastProcessedLabel: hasHighestMemoryProcessed
+      ? `#${highestMemoryProcessed}`
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone"),
+  };
+}
+
 function getMemoryBoundaryTargetId() {
   const highest = getHighestMemoryProcessed();
   if (!Number.isFinite(highest)) {
@@ -3853,6 +3895,25 @@ function updateLorebookStatusDisplay() {
   // Manual lorebook button visibility is now handled by populateInlineButtons()
 }
 
+function updateRpgMemoryStatusDisplay() {
+  const settings = extension_settings.STMemoryBooks;
+  if (!settings) return;
+
+  const status = getRpgMemoryStatus(settings);
+  const setText = (selector, value) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.textContent = value;
+    }
+  };
+
+  setText("#stmb-rpg-status-mode", status.modeLabel);
+  setText("#stmb-rpg-status-policy", status.policyLabel);
+  setText("#stmb-rpg-status-interval", String(status.interval));
+  setText("#stmb-rpg-status-buffer", String(status.buffer));
+  setText("#stmb-rpg-status-last-processed", status.lastProcessedLabel);
+}
+
 /**
  * Populate inline button containers with dynamic buttons (profile and manual lorebook buttons)
  */
@@ -6756,6 +6817,7 @@ async function showSettingsPopup() {
     rpgAutomationPolicyOptions: getRpgAutomationPolicyOptions(
       settings.moduleSettings.rpgAutomationPolicy,
     ),
+    rpgMemoryStatus: getRpgMemoryStatus(settings, sceneMarkers),
     autoSummaryEnabled: settings.moduleSettings.autoSummaryEnabled ?? false,
     autoSummaryInterval: settings.moduleSettings.autoSummaryInterval ?? 50,
     autoSummaryBuffer: settings.moduleSettings.autoSummaryBuffer ?? 2,
@@ -7280,6 +7342,7 @@ function setupSettingsEventListeners() {
       if (policySelect) {
         policySelect.disabled = !e.target.checked;
       }
+      updateRpgMemoryStatusDisplay();
       saveSettingsDebounced();
       return;
     }
@@ -7288,6 +7351,7 @@ function setupSettingsEventListeners() {
       settings.moduleSettings.rpgAutomationPolicy = normalizeRpgAutomationPolicy(
         e.target.value,
       );
+      updateRpgMemoryStatusDisplay();
       saveSettingsDebounced();
       return;
     }
@@ -7317,6 +7381,7 @@ function setupSettingsEventListeners() {
       const value = parseInt(e.target.value);
       if (!isNaN(value) && value >= 10 && value <= 200) {
         settings.moduleSettings.autoSummaryInterval = value;
+        updateRpgMemoryStatusDisplay();
         saveSettingsDebounced();
       }
       return;
@@ -7325,6 +7390,7 @@ function setupSettingsEventListeners() {
     if (e.target.matches("#stmb-auto-summary-buffer")) {
       const value = readIntInput(e.target);
       settings.moduleSettings.autoSummaryBuffer = clampInt(value ?? 0, 0, 50);
+      updateRpgMemoryStatusDisplay();
       saveSettingsDebounced();
       return;
     }
@@ -7790,6 +7856,7 @@ async function refreshPopupContent() {
       rpgAutomationPolicyOptions: getRpgAutomationPolicyOptions(
         settings.moduleSettings.rpgAutomationPolicy,
       ),
+      rpgMemoryStatus: getRpgMemoryStatus(settings, sceneMarkers),
       autoSummaryEnabled: settings.moduleSettings.autoSummaryEnabled ?? false,
       autoSummaryInterval: settings.moduleSettings.autoSummaryInterval ?? 50,
       autoSummaryBuffer: settings.moduleSettings.autoSummaryBuffer ?? 0,

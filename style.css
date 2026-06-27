@@ -211,6 +211,21 @@
     background-color: var(--SmartThemeChatTintColor);
 }
 
+.stmb-rpg-memory-status {
+    margin: 8px 0 12px;
+}
+
+.stmb-rpg-status-grid {
+    display: grid;
+    grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+    gap: 4px 12px;
+    margin-top: 6px;
+}
+
+.stmb-rpg-status-grid > span:nth-child(odd) {
+    color: var(--SmartThemeEmColor);
+}
+
 #stmb-summary-api, #stmb-summary-model, #stmb-summary-temp, #stmb-summary-title {
     color: var(--SmartThemeQuoteColor);
     font-weight: bold;

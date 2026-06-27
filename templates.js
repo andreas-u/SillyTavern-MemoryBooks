@@ -248,6 +248,22 @@ export const settingsTemplate = Handlebars.compile(`
             </label>
         </div>
 
+        <div id="stmb-rpg-memory-status" class="info-block stmb-rpg-memory-status">
+            <strong data-i18n="STMemoryBooks_RpgStatusTitle">RPG status</strong>
+            <div class="stmb-rpg-status-grid">
+                <span data-i18n="STMemoryBooks_RpgStatusMode">Mode</span>
+                <span id="stmb-rpg-status-mode">{{rpgMemoryStatus.modeLabel}}</span>
+                <span data-i18n="STMemoryBooks_RpgStatusPolicy">Policy</span>
+                <span id="stmb-rpg-status-policy">{{rpgMemoryStatus.policyLabel}}</span>
+                <span data-i18n="STMemoryBooks_RpgStatusInterval">Interval</span>
+                <span><span id="stmb-rpg-status-interval">{{rpgMemoryStatus.interval}}</span> <span data-i18n="STMemoryBooks_RpgStatusMessages">messages</span></span>
+                <span data-i18n="STMemoryBooks_RpgStatusBuffer">Buffer</span>
+                <span><span id="stmb-rpg-status-buffer">{{rpgMemoryStatus.buffer}}</span> <span data-i18n="STMemoryBooks_RpgStatusMessages">messages</span></span>
+                <span data-i18n="STMemoryBooks_RpgStatusLastProcessed">Last processed</span>
+                <span id="stmb-rpg-status-last-processed">{{rpgMemoryStatus.lastProcessedLabel}}</span>
+            </div>
+        </div>
+
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_AutoMemory">Automatic Memories</h3>
 
         <div class="world_entry_form_control">

@@ -28,15 +28,24 @@ Goal: make the current RPG mode reliable enough to use in real chats without cha
   - [ ] `silent`: creates memories without review when normal Auto-Summary conditions are met.
   - [ ] `review_major`: sends generated memories through review before saving.
   - [ ] `manual`: asks before generation and sends generated memories through review.
-- [ ] Clarify UI copy for RPG mode so users understand it is currently powered by Auto-Summary.
-- [ ] Add a visible status line for RPG mode showing enabled/disabled, policy, interval, buffer, and last processed message.
-- [ ] Add a small smoke-test checklist for manual SillyTavern verification.
+- [x] Clarify UI copy for RPG mode so users understand it is currently powered by Auto-Summary.
+- [x] Add a visible status line for RPG mode showing enabled/disabled, policy, interval, buffer, and last processed message.
+- [x] Add a small smoke-test checklist for manual SillyTavern verification.
 
 Acceptance criteria:
 
 - Existing non-RPG Auto-Summary behavior is unchanged when RPG mode is disabled.
 - No RPG setting silently changes unrelated user preferences.
 - A user can enable RPG mode, pick a policy, roleplay past the interval, and see the expected automation path.
+
+Manual smoke-test checklist:
+
+- Open Memory Books settings, enable RPG Campaign Memory, close and reopen settings, and verify the enabled state and selected policy persist.
+- With RPG mode disabled, confirm existing Auto-Summary settings and manual Memory Books actions behave as before.
+- With RPG mode enabled, confirm Auto-Summary is checked, the RPG status line updates immediately, and manual Memory Books controls remain visible.
+- Set policy to `silent`, roleplay past interval + buffer, and confirm a memory is created without a review popup.
+- Set policy to `review_major`, roleplay past interval + buffer, and confirm the generated memory goes through preview/review.
+- Set policy to `manual`, roleplay past interval + buffer, and confirm the create/postpone prompt appears before review.
 
 ## Milestone 2: Campaign Dashboard
 
