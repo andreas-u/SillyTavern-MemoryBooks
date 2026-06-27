@@ -674,6 +674,25 @@ function getRpgCampaignDashboard(settings, sceneMarkers = null) {
   const lastTriggerConfidence = Number.isFinite(markers.rpgContentLastTriggerConfidence)
     ? `${Math.round(markers.rpgContentLastTriggerConfidence * 100)}%`
     : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  const lastScratchpadSignal = typeof markers.rpgScratchpadTriggerState === "string" && markers.rpgScratchpadTriggerState.trim()
+    ? formatRpgTriggerType(markers.rpgScratchpadTriggerState)
+    : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  const lastScratchpadSignalMessage = Number.isFinite(markers.rpgScratchpadLastSignalMessage)
+    ? `#${markers.rpgScratchpadLastSignalMessage}`
+    : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  const lastScratchpadReason = typeof markers.rpgScratchpadTriggerReason === "string" && markers.rpgScratchpadTriggerReason.trim()
+    ? markers.rpgScratchpadTriggerReason.trim()
+    : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  const lastMemoryScope = typeof markers.rpgContentLastMemoryScope === "string" && markers.rpgContentLastMemoryScope.trim()
+    ? markers.rpgContentLastMemoryScope.trim()
+    : typeof markers.rpgScratchpadMemoryScope === "string" && markers.rpgScratchpadMemoryScope.trim()
+      ? markers.rpgScratchpadMemoryScope.trim()
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  const lastTemporalAnchor = typeof markers.rpgContentLastTemporalAnchor === "string" && markers.rpgContentLastTemporalAnchor.trim()
+    ? markers.rpgContentLastTemporalAnchor.trim()
+    : typeof markers.rpgScratchpadTemporalAnchor === "string" && markers.rpgScratchpadTemporalAnchor.trim()
+      ? markers.rpgScratchpadTemporalAnchor.trim()
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
 
   let contentTriggerState;
   if (!moduleSettings.rpgMemoryModeEnabled) {
@@ -721,7 +740,36 @@ function getRpgCampaignDashboard(settings, sceneMarkers = null) {
     lastTriggerReason,
     lastTriggerType,
     lastTriggerConfidence,
+    lastScratchpadSignal,
+    lastScratchpadSignalMessage,
+    lastScratchpadReason,
+    lastMemoryScope,
+    lastTemporalAnchor,
   };
+}
+
+function applyRpgTriggerContextToCompiledScene(compiledScene) {
+  const markers = getSceneMarkers() || {};
+  if (
+    !compiledScene?.metadata ||
+    !markers.rpgContentLastTriggerReason ||
+    markers.rpgContentLastTriggeredMessage !== compiledScene.metadata.sceneEnd
+  ) {
+    return compiledScene;
+  }
+
+  compiledScene.metadata.rpgMemoryTrigger = {
+    reason: markers.rpgContentLastTriggerReason || "",
+    type: markers.rpgContentLastTriggerType || "",
+    confidence: Number.isFinite(markers.rpgContentLastTriggerConfidence)
+      ? markers.rpgContentLastTriggerConfidence
+      : null,
+    scope: markers.rpgContentLastMemoryScope || markers.rpgScratchpadMemoryScope || "",
+    temporalAnchor: markers.rpgContentLastTemporalAnchor || markers.rpgScratchpadTemporalAnchor || "",
+    scratchpadState: markers.rpgContentLastScratchpadState || markers.rpgScratchpadTriggerState || "",
+  };
+
+  return compiledScene;
 }
 
 function getMemoryBoundaryTargetId() {
@@ -2707,6 +2755,7 @@ async function executeMemoryGeneration(
       sceneData.sceneEnd,
     );
     compiledScene = compileScene(sceneRequest);
+    applyRpgTriggerContextToCompiledScene(compiledScene);
 
     // Validate compiled scene
     const validation = validateCompiledScene(compiledScene);
@@ -3147,6 +3196,7 @@ async function buildQueuedMemoryJob(sceneData, lorebookValidation, effectiveSett
   const { profileSettings, summaryCount, tokenThreshold, settings } = effectiveSettings;
   const sceneRequest = createSceneRequest(sceneData.sceneStart, sceneData.sceneEnd);
   const compiledScene = compileScene(sceneRequest);
+  applyRpgTriggerContextToCompiledScene(compiledScene);
   const validation = validateCompiledScene(compiledScene);
   if (!validation.valid) {
     throw new Error(`Scene compilation failed: ${validation.errors.join(", ")}`);
@@ -4109,6 +4159,11 @@ function updateRpgCampaignDashboardDisplay() {
   setText("#stmb-dashboard-trigger-type", dashboard.lastTriggerType);
   setText("#stmb-dashboard-trigger-confidence", dashboard.lastTriggerConfidence);
   setText("#stmb-dashboard-trigger-reason", dashboard.lastTriggerReason);
+  setText("#stmb-dashboard-scratchpad-signal", dashboard.lastScratchpadSignal);
+  setText("#stmb-dashboard-scratchpad-message", dashboard.lastScratchpadSignalMessage);
+  setText("#stmb-dashboard-scratchpad-reason", dashboard.lastScratchpadReason);
+  setText("#stmb-dashboard-memory-scope", dashboard.lastMemoryScope);
+  setText("#stmb-dashboard-temporal-anchor", dashboard.lastTemporalAnchor);
 
   const progressTrack = document.querySelector("#stmb-dashboard-interval-progress");
   if (progressTrack) {

@@ -77,6 +77,16 @@ export const settingsTemplate = Handlebars.compile(`
                     <strong id="stmb-dashboard-trigger-confidence">{{rpgCampaignDashboard.lastTriggerConfidence}}</strong>
                     <span data-i18n="STMemoryBooks_DashboardTriggerReason">Reason</span>
                     <strong id="stmb-dashboard-trigger-reason">{{rpgCampaignDashboard.lastTriggerReason}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardScratchpadSignal">Scratchpad signal</span>
+                    <strong id="stmb-dashboard-scratchpad-signal">{{rpgCampaignDashboard.lastScratchpadSignal}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardScratchpadMessage">Scratchpad message</span>
+                    <strong id="stmb-dashboard-scratchpad-message">{{rpgCampaignDashboard.lastScratchpadSignalMessage}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardScratchpadReason">Scratchpad reason</span>
+                    <strong id="stmb-dashboard-scratchpad-reason">{{rpgCampaignDashboard.lastScratchpadReason}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardMemoryScope">Memory scope</span>
+                    <strong id="stmb-dashboard-memory-scope">{{rpgCampaignDashboard.lastMemoryScope}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardTemporalAnchor">Temporal anchor</span>
+                    <strong id="stmb-dashboard-temporal-anchor">{{rpgCampaignDashboard.lastTemporalAnchor}}</strong>
                 </div>
             </div>
         </div>

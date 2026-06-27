@@ -27,6 +27,21 @@ function i18n(key, fallback, params) {
     });
 }
 
+function storeScratchpadSignal(stmbData, signal) {
+    if (!signal) {
+        return;
+    }
+
+    stmbData.rpgScratchpadTriggerState = signal.state || '';
+    stmbData.rpgScratchpadTriggerType = signal.type || '';
+    stmbData.rpgScratchpadTriggerReason = signal.reason || '';
+    stmbData.rpgScratchpadMemoryScope = signal.scope || '';
+    stmbData.rpgScratchpadTemporalAnchor = signal.temporalAnchor || '';
+    if (Number.isFinite(signal.scratchpadMessage)) {
+        stmbData.rpgScratchpadLastSignalMessage = signal.scratchpadMessage;
+    }
+}
+
 /**
  * Validates lorebook for auto-summary with user-friendly prompts
  */
@@ -197,6 +212,7 @@ async function checkAutoSummaryTrigger() {
             buffer,
         );
         if (contentTrigger.checked) {
+            storeScratchpadSignal(stmbData, contentTrigger.scratchpadSignal);
             saveMetadataForCurrentContext();
         }
 
@@ -272,6 +288,9 @@ async function checkAutoSummaryTrigger() {
             stmbData.rpgContentLastTriggerReason = contentTrigger.reason;
             stmbData.rpgContentLastTriggerType = contentTrigger.memoryType;
             stmbData.rpgContentLastTriggerConfidence = contentTrigger.confidence;
+            stmbData.rpgContentLastMemoryScope = contentTrigger.memoryScope || contentTrigger.scratchpadSignal?.scope || '';
+            stmbData.rpgContentLastTemporalAnchor = contentTrigger.temporalAnchor || contentTrigger.scratchpadSignal?.temporalAnchor || '';
+            stmbData.rpgContentLastScratchpadState = contentTrigger.scratchpadSignal?.state || '';
         }
         saveMetadataForCurrentContext();
 

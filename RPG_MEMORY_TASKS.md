@@ -99,14 +99,14 @@ Acceptance criteria:
 
 Goal: trigger RPG memory generation from meaningful campaign events rather than only from a fixed message count.
 
-- [ ] Define trigger classifier output schema:
-  - [ ] should create memory
-  - [ ] confidence
-  - [ ] urgency
-  - [ ] reason
-  - [ ] memory type
-  - [ ] suggested message range
-  - [ ] review required
+- [x] Define trigger classifier output schema:
+  - [x] should create memory
+  - [x] confidence
+  - [x] urgency
+  - [x] reason
+  - [x] memory type
+  - [x] suggested message range
+  - [x] review required
 - [x] Add first-pass heuristic trigger types:
   - [x] scene boundary
   - [x] canon event
@@ -122,6 +122,11 @@ Goal: trigger RPG memory generation from meaningful campaign events rather than 
   - [x] character knowledge changes
   - [x] relationship/read-of-user changes
   - [x] cutaway and narrator note changes
+- [x] Add explicit Scene Scratchpad `Memory Trigger` support:
+  - [x] `State: required` creates a memory even during cooldown unless it duplicates the last required trigger
+  - [x] `State: candidate` is exposed to dashboard/status and can be confirmed by existing heuristics
+  - [x] `State: none` suppresses scratchpad-delta memory creation for unresolved present-state work
+  - [x] `Memory Scope` and `Temporal Anchor` are passed into memory generation
 - [x] Store last content-trigger check position per chat.
 - [x] Add minimum cooldown so trigger checks cannot spam memory generation.
 - [x] Keep fixed interval as a fallback max interval.

@@ -1187,6 +1187,7 @@ export async function createMemory(compiledScene, profile, options = {}) {
                 presetUsed: profile.preset || 'custom',
                 tokenUsage: tokenEstimate,
                 generationMethod: 'json-structured-output',
+                rpgMemoryTrigger: compiledScene.metadata.rpgMemoryTrigger || null,
                 version: '2.0'
             },
             suggestedKeys: processedMemory.suggestedKeys,
@@ -1335,6 +1336,33 @@ export function appendAdditionalContextSection(sceneHeader, additionalContextEnt
     sceneHeader.push("");
 }
 
+function appendRpgMemoryTriggerSection(sceneHeader, metadata = {}) {
+    const trigger = metadata.rpgMemoryTrigger;
+    if (!trigger || !trigger.reason) {
+        return;
+    }
+
+    sceneHeader.push("=== RPG MEMORY TRIGGER CONTEXT ===");
+    sceneHeader.push("Use this trigger context to keep the generated memory temporally grounded. The memory should record durable campaign changes, not the scratchpad's temporary working notes.");
+    sceneHeader.push(`Trigger type: ${trigger.type || 'unspecified'}`);
+    sceneHeader.push(`Trigger reason: ${trigger.reason}`);
+    if (trigger.scope) {
+        sceneHeader.push(`Memory scope: ${trigger.scope}`);
+    }
+    if (trigger.temporalAnchor) {
+        sceneHeader.push(`Temporal anchor: ${trigger.temporalAnchor}`);
+    }
+    if (trigger.scratchpadState) {
+        sceneHeader.push(`Scratchpad trigger state: ${trigger.scratchpadState}`);
+    }
+    if (Number.isFinite(trigger.confidence)) {
+        sceneHeader.push(`Trigger confidence: ${Math.round(trigger.confidence * 100)}%`);
+    }
+    sceneHeader.push("When useful, structure the memory around: When, Where, Durable change, Current unresolved thread, Scheduled future event.");
+    sceneHeader.push("=== END RPG MEMORY TRIGGER CONTEXT ===");
+    sceneHeader.push("");
+}
+
 /**
  * Formats the array of scene messages into a single text block for the AI.
  * @private
@@ -1356,6 +1384,7 @@ function formatSceneForAI(messages, metadata, previousSummariesContext = [], add
     ];
     
     appendAdditionalContextSection(sceneHeader, additionalContextEntries);
+    appendRpgMemoryTriggerSection(sceneHeader, metadata);
 
     // Add previous memories context if available
     if (previousSummariesContext && previousSummariesContext.length > 0) {

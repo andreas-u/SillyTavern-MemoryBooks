@@ -109,11 +109,20 @@ const SCRATCHPAD_LABELS = [
     'Their read of <user>',
     'Their read of user',
     'Scene State',
+    'Memory Trigger',
     'Active Threads & Stakes',
     'Active Threads &amp; Stakes',
     'Parallel Storylines',
     'Next Cutaway Candidate',
     'Narrator Notes',
+];
+
+const MEMORY_TRIGGER_FIELDS = [
+    'State',
+    'Type',
+    'Reason',
+    'Memory Scope',
+    'Temporal Anchor',
 ];
 
 function getMessageText(message) {
@@ -208,6 +217,71 @@ function extractLabelValues(text, labels, repeated = false) {
     return repeated ? values.join(' | ') : values[0] || '';
 }
 
+function extractLabelRawValue(text, labels) {
+    const lower = text.toLowerCase();
+    const candidates = labels.map((label) => `${label.toLowerCase()}:`);
+
+    for (const candidate of candidates) {
+        const index = lower.indexOf(candidate);
+        if (index < 0) {
+            continue;
+        }
+
+        const valueStart = index + candidate.length;
+        const nextLabel = findNextLabelIndex(text, valueStart);
+        const valueEnd = nextLabel >= 0 ? nextLabel : text.length;
+        return text.slice(valueStart, valueEnd).trim();
+    }
+
+    return '';
+}
+
+function cleanMemoryTriggerValue(value) {
+    const cleaned = stripHtml(value)
+        .replace(/\s+/g, ' ')
+        .trim();
+    return /^[-\u2013\u2014]+$/.test(cleaned) ? '' : cleaned;
+}
+
+function extractMemoryTriggerField(triggerText, field) {
+    const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const otherFields = MEMORY_TRIGGER_FIELDS
+        .filter((candidate) => candidate !== field)
+        .map((candidate) => candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|');
+    const pattern = new RegExp(
+        `(?:^|\\n)\\s*${escapedField}:\\s*([\\s\\S]*?)(?=\\n\\s*(?:${otherFields}):|$)`,
+        'i',
+    );
+    const match = String(triggerText || '').match(pattern);
+    return cleanMemoryTriggerValue(match?.[1] || '');
+}
+
+function parseExplicitMemoryTrigger(scratchpadText) {
+    const triggerText = extractLabelRawValue(scratchpadText, ['Memory Trigger']);
+    if (!triggerText) {
+        return null;
+    }
+
+    const state = extractMemoryTriggerField(triggerText, 'State');
+    const type = extractMemoryTriggerField(triggerText, 'Type');
+    const reason = extractMemoryTriggerField(triggerText, 'Reason');
+    const scope = extractMemoryTriggerField(triggerText, 'Memory Scope');
+    const temporalAnchor = extractMemoryTriggerField(triggerText, 'Temporal Anchor');
+
+    if (!state && !type && !reason && !scope && !temporalAnchor) {
+        return null;
+    }
+
+    return {
+        state,
+        type,
+        reason,
+        scope,
+        temporalAnchor,
+    };
+}
+
 function parseScratchpad(rawText) {
     const scratchpadText = extractScratchpadText(rawText);
     if (!scratchpadText) {
@@ -220,7 +294,10 @@ function parseScratchpad(rawText) {
         sections[rule.key] = extractLabelValues(scratchpadText, labels, !!rule.repeated);
     }
 
-    return { sections };
+    return {
+        sections,
+        memoryTrigger: parseExplicitMemoryTrigger(scratchpadText),
+    };
 }
 
 function tokenSimilarity(a, b) {
@@ -280,6 +357,42 @@ function evaluateScratchpadTrigger(sceneStart, safeEnd) {
     if (current.index < sceneStart) {
         return null;
     }
+    const explicitTrigger = current.memoryTrigger;
+    const explicitState = String(explicitTrigger?.state || '').toLowerCase();
+    const explicitSignal = explicitTrigger
+        ? {
+            state: explicitTrigger.state || 'unspecified',
+            type: explicitTrigger.type || '',
+            reason: explicitTrigger.reason || '',
+            scope: explicitTrigger.scope || '',
+            temporalAnchor: explicitTrigger.temporalAnchor || '',
+            scratchpadMessage: current.index,
+        }
+        : null;
+
+    if (explicitState === 'required') {
+        return {
+            confidence: 0.98,
+            urgency: 'high',
+            reason: explicitTrigger.reason || 'Scratchpad memory trigger marked required',
+            memoryType: explicitTrigger.type || 'scratchpad_memory_required',
+            reviewRequired: true,
+            scratchpadMessage: current.index,
+            scratchpadSignal: explicitSignal,
+            memoryScope: explicitTrigger.scope || '',
+            temporalAnchor: explicitTrigger.temporalAnchor || '',
+            forceRequired: true,
+        };
+    }
+
+    if (explicitState === 'none') {
+        return {
+            suppressed: true,
+            scratchpadMessage: current.index,
+            scratchpadSignal: explicitSignal,
+        };
+    }
+
     const previous = scratchpads[scratchpads.length - 2];
     const changes = [];
     let score = 0;
@@ -294,7 +407,13 @@ function evaluateScratchpadTrigger(sceneStart, safeEnd) {
     }
 
     if (score < 4) {
-        return null;
+        return explicitSignal
+            ? {
+                suppressed: true,
+                scratchpadMessage: current.index,
+                scratchpadSignal: explicitSignal,
+            }
+            : null;
     }
 
     changes.sort((a, b) => b.weight - a.weight);
@@ -307,6 +426,9 @@ function evaluateScratchpadTrigger(sceneStart, safeEnd) {
         memoryType: primary.memoryType,
         reviewRequired: score >= 7,
         scratchpadMessage: current.index,
+        scratchpadSignal: explicitSignal,
+        memoryScope: explicitTrigger?.scope || '',
+        temporalAnchor: explicitTrigger?.temporalAnchor || '',
     };
 }
 
@@ -357,19 +479,37 @@ export function evaluateRpgContentTrigger(settings, stmbData, highestProcessed, 
         return { shouldCreateMemory: false };
     }
 
-    const lastTriggered = Number.isFinite(stmbData.rpgContentLastTriggeredMessage)
-        ? stmbData.rpgContentLastTriggeredMessage
-        : highestProcessed;
-    if (safeEnd - lastTriggered < triggerSettings.cooldown) {
-        stmbData.rpgContentLastCheckMessage = safeEnd;
-        return { shouldCreateMemory: false, checked: true };
-    }
-
     const checkStart = Math.max(sceneStart, safeEnd - triggerSettings.checkCadence + 1);
     const recentText = buildRecentText(checkStart, safeEnd);
     stmbData.rpgContentLastCheckMessage = safeEnd;
 
     const scratchpadTrigger = evaluateScratchpadTrigger(sceneStart, safeEnd);
+    const lastTriggered = Number.isFinite(stmbData.rpgContentLastTriggeredMessage)
+        ? stmbData.rpgContentLastTriggeredMessage
+        : highestProcessed;
+    const cooldownActive = safeEnd - lastTriggered < triggerSettings.cooldown;
+    const duplicateRequired =
+        scratchpadTrigger?.forceRequired &&
+        String(stmbData.rpgContentLastTriggerReason || '').trim().toLowerCase() === String(scratchpadTrigger.reason || '').trim().toLowerCase() &&
+        String(stmbData.rpgContentLastTriggerType || '').trim().toLowerCase() === String(scratchpadTrigger.memoryType || '').trim().toLowerCase() &&
+        String(stmbData.rpgContentLastTemporalAnchor || '').trim().toLowerCase() === String(scratchpadTrigger.temporalAnchor || '').trim().toLowerCase();
+
+    if (cooldownActive && (!scratchpadTrigger?.forceRequired || duplicateRequired)) {
+        return {
+            shouldCreateMemory: false,
+            checked: true,
+            scratchpadSignal: scratchpadTrigger?.scratchpadSignal || null,
+        };
+    }
+
+    if (scratchpadTrigger?.suppressed) {
+        return {
+            shouldCreateMemory: false,
+            checked: true,
+            scratchpadSignal: scratchpadTrigger.scratchpadSignal || null,
+        };
+    }
+
     if (scratchpadTrigger) {
         return {
             shouldCreateMemory: true,
@@ -381,7 +521,14 @@ export function evaluateRpgContentTrigger(settings, stmbData, highestProcessed, 
             sceneStart,
             sceneEnd: safeEnd,
             reviewRequired: scratchpadTrigger.reviewRequired,
+            scratchpadSignal: scratchpadTrigger.scratchpadSignal || null,
+            memoryScope: scratchpadTrigger.memoryScope || '',
+            temporalAnchor: scratchpadTrigger.temporalAnchor || '',
         };
+    }
+
+    if (cooldownActive) {
+        return { shouldCreateMemory: false, checked: true };
     }
 
     if (!recentText) {
