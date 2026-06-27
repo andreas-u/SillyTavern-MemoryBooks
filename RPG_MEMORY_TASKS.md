@@ -58,11 +58,11 @@ Goal: replace toolbox-first orientation with a campaign-first overview.
   - [x] memory coverage / unprocessed messages
   - [x] interval fallback progress
   - [x] recent content trigger activity
-  - [ ] current situation
-  - [ ] active arcs
-  - [ ] unresolved threads
+  - [x] current situation
+  - [x] active arcs
+  - [x] unresolved threads
   - [ ] major NPCs
-  - [ ] current location
+  - [x] current location
   - [ ] party state
   - [ ] recent memory activity
 - [x] Reuse existing lorebook/memory data first; avoid creating a new storage model until needed.

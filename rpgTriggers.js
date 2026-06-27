@@ -217,6 +217,43 @@ function extractLabelValues(text, labels, repeated = false) {
     return repeated ? values.join(' | ') : values[0] || '';
 }
 
+function cleanDisplayText(text) {
+    return stripHtml(text)
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function extractLabelDisplayValue(text, labels, repeated = false) {
+    const values = [];
+    const lower = text.toLowerCase();
+    const candidates = labels.map((label) => `${label.toLowerCase()}:`);
+
+    for (const candidate of candidates) {
+        let searchFrom = 0;
+        while (searchFrom < lower.length) {
+            const index = lower.indexOf(candidate, searchFrom);
+            if (index < 0) {
+                break;
+            }
+
+            const valueStart = index + candidate.length;
+            const nextLabel = findNextLabelIndex(text, valueStart);
+            const valueEnd = nextLabel >= 0 ? nextLabel : text.length;
+            const value = cleanDisplayText(text.slice(valueStart, valueEnd));
+            if (value) {
+                values.push(value);
+            }
+
+            if (!repeated) {
+                break;
+            }
+            searchFrom = valueEnd;
+        }
+    }
+
+    return repeated ? values.join(' | ') : values[0] || '';
+}
+
 function extractLabelRawValue(text, labels) {
     const lower = text.toLowerCase();
     const candidates = labels.map((label) => `${label.toLowerCase()}:`);
@@ -289,13 +326,16 @@ function parseScratchpad(rawText) {
     }
 
     const sections = {};
+    const displaySections = {};
     for (const rule of SCRATCHPAD_SECTION_RULES) {
         const labels = [rule.label, ...(rule.aliases || [])];
         sections[rule.key] = extractLabelValues(scratchpadText, labels, !!rule.repeated);
+        displaySections[rule.key] = extractLabelDisplayValue(scratchpadText, labels, !!rule.repeated);
     }
 
     return {
         sections,
+        displaySections,
         memoryTrigger: parseExplicitMemoryTrigger(scratchpadText),
     };
 }
@@ -345,6 +385,46 @@ function findRecentScratchpads(sceneStart, safeEnd) {
         }
     }
     return scratchpads.reverse();
+}
+
+function summarizeForDashboard(value, maxLength = 240) {
+    const text = cleanDisplayText(value);
+    if (!text) {
+        return '';
+    }
+    if (text.length <= maxLength) {
+        return text;
+    }
+    return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+export function getLatestRpgScratchpadSnapshot(maxLookback = 80) {
+    const end = chat.length - 1;
+    const start = Math.max(0, end - maxLookback + 1);
+
+    for (let index = end; index >= start; index -= 1) {
+        const message = chat[index];
+        if (!isAssistantMessage(message)) {
+            continue;
+        }
+
+        const parsed = parseScratchpad(getMessageText(message));
+        if (!parsed) {
+            continue;
+        }
+
+        return {
+            messageIndex: index,
+            sceneState: summarizeForDashboard(parsed.displaySections.scene_state, 260),
+            activeThreads: summarizeForDashboard(parsed.displaySections.active_threads, 280),
+            parallelStorylines: summarizeForDashboard(parsed.displaySections.parallel_storylines, 260),
+            nextCutaway: summarizeForDashboard(parsed.displaySections.next_cutaway, 220),
+            narratorNotes: summarizeForDashboard(parsed.displaySections.narrator_notes, 220),
+            memoryTrigger: parsed.memoryTrigger || null,
+        };
+    }
+
+    return null;
 }
 
 function evaluateScratchpadTrigger(sceneStart, safeEnd) {

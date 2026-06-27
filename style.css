@@ -285,6 +285,8 @@
 .stmb-dashboard-metric span,
 .stmb-dashboard-trigger-main span,
 .stmb-dashboard-trigger-grid span,
+.stmb-dashboard-scratchpad-header span,
+.stmb-dashboard-scratchpad-grid span,
 .stmb-dashboard-progress-label span {
     color: var(--SmartThemeEmColor);
     font-size: calc(var(--mainFontSize) * 0.9);
@@ -308,7 +310,9 @@
 
 .stmb-dashboard-metric strong,
 .stmb-dashboard-trigger-grid strong,
-.stmb-dashboard-trigger-main strong {
+.stmb-dashboard-trigger-main strong,
+.stmb-dashboard-scratchpad-header strong,
+.stmb-dashboard-scratchpad-grid strong {
     min-width: 0;
     overflow-wrap: anywhere;
 }
@@ -344,6 +348,27 @@
     gap: 8px;
 }
 
+.stmb-dashboard-scratchpad {
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid color-mix(in srgb, var(--SmartThemeBorderColor) 70%, transparent);
+    border-radius: 5px;
+    background-color: color-mix(in srgb, var(--SmartThemeBodyColor, #dcdcd2) 6%, transparent 94%);
+}
+
+.stmb-dashboard-scratchpad-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.stmb-dashboard-scratchpad-grid {
+    display: grid;
+    grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+    gap: 5px 12px;
+}
+
 .stmb-dashboard-trigger-main {
     display: flex;
     justify-content: space-between;
@@ -360,6 +385,7 @@
 @media screen and (max-width: 700px) {
     .stmb-dashboard-header,
     .stmb-dashboard-trigger-main,
+    .stmb-dashboard-scratchpad-header,
     .stmb-dashboard-progress-label {
         display: grid;
         text-align: left;
@@ -371,6 +397,10 @@
 
     .stmb-dashboard-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stmb-dashboard-scratchpad-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

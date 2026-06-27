@@ -102,6 +102,7 @@ import {
   throwIfStmbStopped,
   withGoBackButton,
 } from "./utils.js";
+import { getLatestRpgScratchpadSnapshot } from "./rpgTriggers.js";
 import * as SummaryPromptManager from "./summaryPromptManager.js";
 import {
   MEMORY_GENERATION,
@@ -693,6 +694,9 @@ function getRpgCampaignDashboard(settings, sceneMarkers = null) {
     : typeof markers.rpgScratchpadTemporalAnchor === "string" && markers.rpgScratchpadTemporalAnchor.trim()
       ? markers.rpgScratchpadTemporalAnchor.trim()
       : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  const latestScratchpad = getLatestRpgScratchpadSnapshot();
+  const noScratchpadValue = translate("No scratchpad found yet", "STMemoryBooks_DashboardNoScratchpad");
+  const noScratchpadDetail = translate("No current scratchpad state available yet.", "STMemoryBooks_DashboardNoScratchpadDetail");
 
   let contentTriggerState;
   if (!moduleSettings.rpgMemoryModeEnabled) {
@@ -745,6 +749,14 @@ function getRpgCampaignDashboard(settings, sceneMarkers = null) {
     lastScratchpadReason,
     lastMemoryScope,
     lastTemporalAnchor,
+    scratchpadSnapshotMessage: Number.isFinite(latestScratchpad?.messageIndex)
+      ? `#${latestScratchpad.messageIndex}`
+      : noScratchpadValue,
+    currentSituation: latestScratchpad?.sceneState || noScratchpadDetail,
+    activeArcs: latestScratchpad?.activeThreads || noScratchpadDetail,
+    offstageMotion: latestScratchpad?.parallelStorylines || noScratchpadDetail,
+    nextCutaway: latestScratchpad?.nextCutaway || noScratchpadDetail,
+    narratorNotes: latestScratchpad?.narratorNotes || noScratchpadDetail,
   };
 }
 
@@ -4164,6 +4176,12 @@ function updateRpgCampaignDashboardDisplay() {
   setText("#stmb-dashboard-scratchpad-reason", dashboard.lastScratchpadReason);
   setText("#stmb-dashboard-memory-scope", dashboard.lastMemoryScope);
   setText("#stmb-dashboard-temporal-anchor", dashboard.lastTemporalAnchor);
+  setText("#stmb-dashboard-scratchpad-snapshot-message", dashboard.scratchpadSnapshotMessage);
+  setText("#stmb-dashboard-current-situation", dashboard.currentSituation);
+  setText("#stmb-dashboard-active-arcs", dashboard.activeArcs);
+  setText("#stmb-dashboard-offstage-motion", dashboard.offstageMotion);
+  setText("#stmb-dashboard-next-cutaway", dashboard.nextCutaway);
+  setText("#stmb-dashboard-narrator-notes", dashboard.narratorNotes);
 
   const progressTrack = document.querySelector("#stmb-dashboard-interval-progress");
   if (progressTrack) {

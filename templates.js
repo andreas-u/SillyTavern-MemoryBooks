@@ -59,6 +59,25 @@ export const settingsTemplate = Handlebars.compile(`
                 <small class="opacity50p"><span data-i18n="STMemoryBooks_DashboardFallbackRemaining">Remaining until interval fallback</span>: <span id="stmb-dashboard-interval-remaining">{{rpgCampaignDashboard.intervalRemaining}}</span></small>
             </div>
 
+            <div class="stmb-dashboard-scratchpad">
+                <div class="stmb-dashboard-scratchpad-header">
+                    <span data-i18n="STMemoryBooks_DashboardCurrentScratchpad">Latest scratchpad</span>
+                    <strong id="stmb-dashboard-scratchpad-snapshot-message">{{rpgCampaignDashboard.scratchpadSnapshotMessage}}</strong>
+                </div>
+                <div class="stmb-dashboard-scratchpad-grid">
+                    <span data-i18n="STMemoryBooks_DashboardCurrentSituation">Current situation</span>
+                    <strong id="stmb-dashboard-current-situation">{{rpgCampaignDashboard.currentSituation}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardActiveArcs">Active arcs</span>
+                    <strong id="stmb-dashboard-active-arcs">{{rpgCampaignDashboard.activeArcs}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardOffstageMotion">Offstage motion</span>
+                    <strong id="stmb-dashboard-offstage-motion">{{rpgCampaignDashboard.offstageMotion}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardNextCutaway">Next cutaway</span>
+                    <strong id="stmb-dashboard-next-cutaway">{{rpgCampaignDashboard.nextCutaway}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardNarratorNotes">Narrator notes</span>
+                    <strong id="stmb-dashboard-narrator-notes">{{rpgCampaignDashboard.narratorNotes}}</strong>
+                </div>
+            </div>
+
             <div class="stmb-dashboard-trigger">
                 <div class="stmb-dashboard-trigger-main">
                     <span data-i18n="STMemoryBooks_DashboardContentTriggerState">Content trigger state</span>
