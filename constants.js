@@ -39,6 +39,15 @@ export const RPG_MEMORY = {
         MANUAL: 'manual',
     }),
     DEFAULT_AUTOMATION_POLICY: 'review_major',
+    CONTENT_TRIGGER: Object.freeze({
+        DEFAULT_ENABLED: true,
+        DEFAULT_CHECK_CADENCE: 6,
+        MIN_CHECK_CADENCE: 3,
+        MAX_CHECK_CADENCE: 50,
+        DEFAULT_COOLDOWN: 12,
+        MIN_COOLDOWN: 5,
+        MAX_COOLDOWN: 100,
+    }),
 };
 
 // File names

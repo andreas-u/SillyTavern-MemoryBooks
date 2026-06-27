@@ -22,9 +22,18 @@
   "STMemoryBooks_RpgStatusBuffer": "Buffer",
   "STMemoryBooks_RpgStatusMessages": "messages",
   "STMemoryBooks_RpgStatusLastProcessed": "Last processed",
+  "STMemoryBooks_RpgStatusLastTrigger": "Last trigger",
   "STMemoryBooks_RpgStatusLastProcessedNone": "None yet",
+  "STMemoryBooks_RpgContentTriggers": "RPG Content Triggers",
+  "STMemoryBooks_RpgContentTriggersEnabled": "Trigger RPG memories from campaign events",
+  "STMemoryBooks_RpgContentTriggersDesc": "Creates RPG memories early when the recent chat contains important canon, quest, entity, relationship, location, or explicit remember-this signals. The fixed interval remains a fallback.",
+  "STMemoryBooks_RpgContentTriggerCheckCadence": "Content check cadence:",
+  "STMemoryBooks_RpgContentTriggerCheckCadenceDesc": "Minimum new messages before scanning recent RPG content for trigger signals.",
+  "STMemoryBooks_RpgContentTriggerCooldown": "Content trigger cooldown:",
+  "STMemoryBooks_RpgContentTriggerCooldownDesc": "Minimum messages after a content-triggered memory before another content trigger can fire.",
   "STMemoryBooks_RpgManualReviewReadyTitle": "RPG Memory Ready",
   "STMemoryBooks_RpgManualReviewReadyDesc": "RPG campaign memory mode is ready to create a memory for the selected message range.",
   "STMemoryBooks_RpgManualReviewReadyDescRange": "RPG campaign memory mode is ready to create a memory for messages {{start}}-{{end}}.",
+  "STMemoryBooks_RpgManualReviewReason": "Trigger reason: {{reason}}",
   "STMemoryBooks_RpgManualReviewQuestion": "Create it now, or postpone the check?"
 }

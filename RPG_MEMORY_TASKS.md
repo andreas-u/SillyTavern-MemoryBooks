@@ -102,27 +102,27 @@ Goal: trigger RPG memory generation from meaningful campaign events rather than 
   - [ ] memory type
   - [ ] suggested message range
   - [ ] review required
-- [ ] Add trigger types:
-  - [ ] scene boundary
-  - [ ] canon event
-  - [ ] entity update
-  - [ ] quest/thread progress
-  - [ ] relationship shift
-  - [ ] location/time transition
-  - [ ] user importance signal
-- [ ] Store last content-trigger check position per chat.
-- [ ] Add minimum cooldown so trigger checks cannot spam memory generation.
-- [ ] Keep fixed interval as a fallback max interval.
+- [x] Add first-pass heuristic trigger types:
+  - [x] scene boundary
+  - [x] canon event
+  - [x] entity update
+  - [x] quest/thread progress
+  - [x] relationship shift
+  - [x] location/time transition
+  - [x] user importance signal
+- [x] Store last content-trigger check position per chat.
+- [x] Add minimum cooldown so trigger checks cannot spam memory generation.
+- [x] Keep fixed interval as a fallback max interval.
 - [ ] Route trigger decisions through RPG automation policy:
   - [ ] `silent`: auto-save high-confidence low-risk updates
   - [ ] `review_major`: review major canon changes
   - [ ] `manual`: ask before generation
-- [ ] Add settings for content-aware triggering:
-  - [ ] enabled/disabled
-  - [ ] check cadence
-  - [ ] fallback interval
+- [x] Add settings for content-aware triggering:
+  - [x] enabled/disabled
+  - [x] check cadence
+  - [x] fallback interval
   - [ ] review sensitivity
-- [ ] Add concise status/UI feedback showing why a memory was triggered.
+- [x] Add concise status/UI feedback showing why a memory was triggered.
 - [ ] Add manual verification cases for content-triggered memories.
 
 Acceptance criteria:

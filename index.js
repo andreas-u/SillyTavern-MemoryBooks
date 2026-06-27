@@ -402,6 +402,9 @@ const defaultSettings = {
     autoSummaryBuffer: 2,
     rpgMemoryModeEnabled: false,
     rpgAutomationPolicy: RPG_MEMORY.DEFAULT_AUTOMATION_POLICY,
+    rpgContentTriggersEnabled: RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_ENABLED,
+    rpgContentTriggerCheckCadence: RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_CHECK_CADENCE,
+    rpgContentTriggerCooldown: RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_COOLDOWN,
     autoConsolidationPromptEnabled: false,
     autoConsolidationTargetTiers: [1],
     autoCreateLorebook: false,
@@ -463,6 +466,26 @@ function normalizeRpgAutomationPolicy(policy) {
   return RPG_AUTOMATION_POLICY_VALUES.has(value)
     ? value
     : RPG_MEMORY.DEFAULT_AUTOMATION_POLICY;
+}
+
+function normalizeRpgContentTriggerSettings(moduleSettings) {
+  return {
+    enabled:
+      moduleSettings.rpgContentTriggersEnabled ??
+      RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_ENABLED,
+    checkCadence: clampInt(
+      moduleSettings.rpgContentTriggerCheckCadence ??
+        RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_CHECK_CADENCE,
+      RPG_MEMORY.CONTENT_TRIGGER.MIN_CHECK_CADENCE,
+      RPG_MEMORY.CONTENT_TRIGGER.MAX_CHECK_CADENCE,
+    ),
+    cooldown: clampInt(
+      moduleSettings.rpgContentTriggerCooldown ??
+        RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_COOLDOWN,
+      RPG_MEMORY.CONTENT_TRIGGER.MIN_COOLDOWN,
+      RPG_MEMORY.CONTENT_TRIGGER.MAX_COOLDOWN,
+    ),
+  };
 }
 
 function shouldShowMemoryPreview(settings) {
@@ -562,6 +585,11 @@ function getRpgMemoryStatus(settings, sceneMarkers = null) {
   );
   const highestMemoryProcessed = markers.highestMemoryProcessed;
   const hasHighestMemoryProcessed = Number.isFinite(highestMemoryProcessed);
+  const lastTriggerReason =
+    typeof markers.rpgContentLastTriggerReason === "string" &&
+    markers.rpgContentLastTriggerReason.trim()
+      ? markers.rpgContentLastTriggerReason.trim()
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
 
   return {
     enabled,
@@ -576,6 +604,7 @@ function getRpgMemoryStatus(settings, sceneMarkers = null) {
     lastProcessedLabel: hasHighestMemoryProcessed
       ? `#${highestMemoryProcessed}`
       : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone"),
+    lastTriggerReason,
   };
 }
 
@@ -2102,6 +2131,15 @@ function validateSettings(settings) {
   settings.moduleSettings.rpgAutomationPolicy = normalizeRpgAutomationPolicy(
     settings.moduleSettings.rpgAutomationPolicy,
   );
+  const rpgContentTriggerSettings = normalizeRpgContentTriggerSettings(
+    settings.moduleSettings,
+  );
+  settings.moduleSettings.rpgContentTriggersEnabled =
+    rpgContentTriggerSettings.enabled;
+  settings.moduleSettings.rpgContentTriggerCheckCadence =
+    rpgContentTriggerSettings.checkCadence;
+  settings.moduleSettings.rpgContentTriggerCooldown =
+    rpgContentTriggerSettings.cooldown;
   if (
     settings.moduleSettings.autoSummaryInterval === undefined ||
     settings.moduleSettings.autoSummaryInterval < 10
@@ -3913,6 +3951,7 @@ function updateRpgMemoryStatusDisplay() {
   setText("#stmb-rpg-status-interval", String(status.interval));
   setText("#stmb-rpg-status-buffer", String(status.buffer));
   setText("#stmb-rpg-status-last-processed", status.lastProcessedLabel);
+  setText("#stmb-rpg-status-last-trigger", status.lastTriggerReason);
 }
 
 function activateSettingsTab(tabName = currentSettingsTab) {
@@ -6840,6 +6879,9 @@ async function showSettingsPopup() {
       settings.moduleSettings.rpgAutomationPolicy,
     ),
     rpgMemoryStatus: getRpgMemoryStatus(settings, sceneMarkers),
+    rpgContentTriggerSettings: normalizeRpgContentTriggerSettings(
+      settings.moduleSettings,
+    ),
     autoSummaryEnabled: settings.moduleSettings.autoSummaryEnabled ?? false,
     autoSummaryInterval: settings.moduleSettings.autoSummaryInterval ?? 50,
     autoSummaryBuffer: settings.moduleSettings.autoSummaryBuffer ?? 2,
@@ -7385,6 +7427,12 @@ function setupSettingsEventListeners() {
       return;
     }
 
+    if (e.target.matches("#stmb-rpg-content-triggers-enabled")) {
+      settings.moduleSettings.rpgContentTriggersEnabled = e.target.checked;
+      saveSettingsDebounced();
+      return;
+    }
+
     if (e.target.matches("#stmb-auto-create-lorebook")) {
       const isEnabling = e.target.checked;
 
@@ -7420,6 +7468,28 @@ function setupSettingsEventListeners() {
       const value = readIntInput(e.target);
       settings.moduleSettings.autoSummaryBuffer = clampInt(value ?? 0, 0, 50);
       updateRpgMemoryStatusDisplay();
+      saveSettingsDebounced();
+      return;
+    }
+
+    if (e.target.matches("#stmb-rpg-content-trigger-check-cadence")) {
+      const value = readIntInput(e.target);
+      settings.moduleSettings.rpgContentTriggerCheckCadence = clampInt(
+        value ?? RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_CHECK_CADENCE,
+        RPG_MEMORY.CONTENT_TRIGGER.MIN_CHECK_CADENCE,
+        RPG_MEMORY.CONTENT_TRIGGER.MAX_CHECK_CADENCE,
+      );
+      saveSettingsDebounced();
+      return;
+    }
+
+    if (e.target.matches("#stmb-rpg-content-trigger-cooldown")) {
+      const value = readIntInput(e.target);
+      settings.moduleSettings.rpgContentTriggerCooldown = clampInt(
+        value ?? RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_COOLDOWN,
+        RPG_MEMORY.CONTENT_TRIGGER.MIN_COOLDOWN,
+        RPG_MEMORY.CONTENT_TRIGGER.MAX_COOLDOWN,
+      );
       saveSettingsDebounced();
       return;
     }
@@ -7565,6 +7635,28 @@ function persistMainPopupSettings(popupElement) {
     popupElement.querySelector("#stmb-rpg-automation-policy")?.value ??
       settings.moduleSettings.rpgAutomationPolicy,
   );
+  const currentRpgContentTriggers = normalizeRpgContentTriggerSettings(
+    settings.moduleSettings,
+  );
+  const rpgContentTriggersEnabled =
+    popupElement.querySelector("#stmb-rpg-content-triggers-enabled")?.checked ??
+    currentRpgContentTriggers.enabled;
+  const rpgContentTriggerCheckCadence = clampInt(
+    readIntInput(
+      popupElement.querySelector("#stmb-rpg-content-trigger-check-cadence"),
+      currentRpgContentTriggers.checkCadence,
+    ),
+    RPG_MEMORY.CONTENT_TRIGGER.MIN_CHECK_CADENCE,
+    RPG_MEMORY.CONTENT_TRIGGER.MAX_CHECK_CADENCE,
+  );
+  const rpgContentTriggerCooldown = clampInt(
+    readIntInput(
+      popupElement.querySelector("#stmb-rpg-content-trigger-cooldown"),
+      currentRpgContentTriggers.cooldown,
+    ),
+    RPG_MEMORY.CONTENT_TRIGGER.MIN_COOLDOWN,
+    RPG_MEMORY.CONTENT_TRIGGER.MAX_COOLDOWN,
+  );
   const autoCreateLorebook =
     popupElement.querySelector("#stmb-auto-create-lorebook")?.checked ??
     settings.moduleSettings.autoCreateLorebook;
@@ -7693,6 +7785,33 @@ function persistMainPopupSettings(popupElement) {
     normalizeRpgAutomationPolicy(settings.moduleSettings.rpgAutomationPolicy)
   ) {
     settings.moduleSettings.rpgAutomationPolicy = rpgAutomationPolicy;
+    hasChanges = true;
+  }
+
+  if (
+    rpgContentTriggersEnabled !==
+    (settings.moduleSettings.rpgContentTriggersEnabled ??
+      RPG_MEMORY.CONTENT_TRIGGER.DEFAULT_ENABLED)
+  ) {
+    settings.moduleSettings.rpgContentTriggersEnabled = rpgContentTriggersEnabled;
+    hasChanges = true;
+  }
+
+  if (
+    rpgContentTriggerCheckCadence !==
+    normalizeRpgContentTriggerSettings(settings.moduleSettings).checkCadence
+  ) {
+    settings.moduleSettings.rpgContentTriggerCheckCadence =
+      rpgContentTriggerCheckCadence;
+    hasChanges = true;
+  }
+
+  if (
+    rpgContentTriggerCooldown !==
+    normalizeRpgContentTriggerSettings(settings.moduleSettings).cooldown
+  ) {
+    settings.moduleSettings.rpgContentTriggerCooldown =
+      rpgContentTriggerCooldown;
     hasChanges = true;
   }
 
@@ -7886,6 +8005,9 @@ async function refreshPopupContent() {
         settings.moduleSettings.rpgAutomationPolicy,
       ),
       rpgMemoryStatus: getRpgMemoryStatus(settings, sceneMarkers),
+      rpgContentTriggerSettings: normalizeRpgContentTriggerSettings(
+        settings.moduleSettings,
+      ),
       autoSummaryEnabled: settings.moduleSettings.autoSummaryEnabled ?? false,
       autoSummaryInterval: settings.moduleSettings.autoSummaryInterval ?? 50,
       autoSummaryBuffer: settings.moduleSettings.autoSummaryBuffer ?? 0,

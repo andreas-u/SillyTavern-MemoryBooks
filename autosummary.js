@@ -8,6 +8,7 @@ import { isMemoryProcessing } from './index.js';
 import { translate } from '../../../i18n.js';
 import { validateLorebookRequirement } from './lorebookValidation.js';
 import { RPG_MEMORY } from './constants.js';
+import { evaluateRpgContentTrigger } from './rpgTriggers.js';
 
 let autoSummarySkippedForProcessing = false;
 let autoSummarySkippedMarkersRef = null;
@@ -117,12 +118,15 @@ function getRpgAutomationPolicy(settings) {
         : RPG_MEMORY.DEFAULT_AUTOMATION_POLICY;
 }
 
-async function confirmRpgManualAutoSummary(sceneStart, sceneEnd) {
+async function confirmRpgManualAutoSummary(sceneStart, sceneEnd, reason = null) {
     const rangeText = i18n(
         'STMemoryBooks_RpgManualReviewReadyDescRange',
         'RPG campaign memory mode is ready to create a memory for messages {{start}}-{{end}}.',
         { start: sceneStart, end: sceneEnd },
     );
+    const reasonText = reason
+        ? `<p>${i18n('STMemoryBooks_RpgManualReviewReason', 'Trigger reason: {{reason}}', { reason })}</p>`
+        : '';
     const questionText = i18n(
         'STMemoryBooks_RpgManualReviewQuestion',
         'Create it now, or postpone the check?',
@@ -131,6 +135,7 @@ async function confirmRpgManualAutoSummary(sceneStart, sceneEnd) {
         <h4 data-i18n="STMemoryBooks_RpgManualReviewReadyTitle">RPG Memory Ready</h4>
         <div class="world_entry_form_control">
             <p>${rangeText}</p>
+            ${reasonText}
             <p>${questionText}</p>
         </div>
     `;
@@ -184,9 +189,21 @@ async function checkAutoSummaryTrigger() {
             console.log(i18n('autosummary.log.sinceLast', 'STMemoryBooks: Messages since last memory ({{highestProcessed}}): {{count}}', { highestProcessed, count: messagesSinceLastMemory }));
         }
 
+        const contentTrigger = evaluateRpgContentTrigger(
+            settings,
+            stmbData,
+            highestProcessed,
+            currentLastMessage,
+            buffer,
+        );
+        if (contentTrigger.checked) {
+            saveMetadataForCurrentContext();
+        }
+
+        const intervalTriggered = messagesSinceLastMemory >= requiredTotal;
         console.log(i18n('autosummary.log.triggerCheck', 'STMemoryBooks: Auto-summary trigger check: {{count}} >= {{required}}?', { count: messagesSinceLastMemory, required: requiredTotal }));
 
-        if (messagesSinceLastMemory < requiredTotal) {
+        if (!contentTrigger.shouldCreateMemory && !intervalTriggered) {
             console.log(i18n('autosummary.log.notTriggered', 'STMemoryBooks: Auto-summary not triggered - need {{needed}} more messages', { needed: requiredTotal - messagesSinceLastMemory }));
             return;
         }
@@ -213,23 +230,32 @@ async function checkAutoSummaryTrigger() {
 
         // Calculate the scene range for auto-summary (apply buffer to end)
         let sceneStart, sceneEnd;
-        const sceneEndCandidate = currentLastMessage - buffer;
-        const safeEnd = Math.max(0, sceneEndCandidate);
-        // Start from the message after the last processed memory (or 0 if none processed yet).
-        sceneStart = highestProcessed + 1;
-        sceneEnd = safeEnd;
+        if (contentTrigger.shouldCreateMemory) {
+            sceneStart = contentTrigger.sceneStart;
+            sceneEnd = contentTrigger.sceneEnd;
+        } else {
+            const sceneEndCandidate = currentLastMessage - buffer;
+            const safeEnd = Math.max(0, sceneEndCandidate);
+            // Start from the message after the last processed memory (or 0 if none processed yet).
+            sceneStart = highestProcessed + 1;
+            sceneEnd = safeEnd;
+        }
         // Defensive: ensure valid range
         if (sceneStart > sceneEnd) {
             return;
         }
 
-        console.log(i18n('autosummary.log.triggered', 'STMemoryBooks: Auto-summary triggered - creating memory for range {{start}}-{{end}}', { start: sceneStart, end: sceneEnd }));
+        if (contentTrigger.shouldCreateMemory) {
+            console.log(i18n('autosummary.log.rpgContentTriggered', 'STMemoryBooks: RPG content trigger matched - {{reason}}; creating memory for range {{start}}-{{end}}', { reason: contentTrigger.reason, start: sceneStart, end: sceneEnd }));
+        } else {
+            console.log(i18n('autosummary.log.triggered', 'STMemoryBooks: Auto-summary triggered - creating memory for range {{start}}-{{end}}', { start: sceneStart, end: sceneEnd }));
+        }
 
         if (
             settings?.moduleSettings?.rpgMemoryModeEnabled &&
             getRpgAutomationPolicy(settings) === RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
         ) {
-            const confirmed = await confirmRpgManualAutoSummary(sceneStart, sceneEnd);
+            const confirmed = await confirmRpgManualAutoSummary(sceneStart, sceneEnd, contentTrigger.reason);
             if (!confirmed) {
                 stmbData.autoSummaryNextPromptAt = currentMessageCount + 10;
                 saveMetadataForCurrentContext();
@@ -241,6 +267,12 @@ async function checkAutoSummaryTrigger() {
         // Set scene markers for the range we want to process
         stmbData.sceneStart = sceneStart;
         stmbData.sceneEnd = sceneEnd;
+        if (contentTrigger.shouldCreateMemory) {
+            stmbData.rpgContentLastTriggeredMessage = sceneEnd;
+            stmbData.rpgContentLastTriggerReason = contentTrigger.reason;
+            stmbData.rpgContentLastTriggerType = contentTrigger.memoryType;
+            stmbData.rpgContentLastTriggerConfidence = contentTrigger.confidence;
+        }
         saveMetadataForCurrentContext();
 
         // Use the existing memory creation system via slash command

@@ -85,6 +85,8 @@ export const settingsTemplate = Handlebars.compile(`
                 <span><span id="stmb-rpg-status-buffer">{{rpgMemoryStatus.buffer}}</span> <span data-i18n="STMemoryBooks_RpgStatusMessages">messages</span></span>
                 <span data-i18n="STMemoryBooks_RpgStatusLastProcessed">Last processed</span>
                 <span id="stmb-rpg-status-last-processed">{{rpgMemoryStatus.lastProcessedLabel}}</span>
+                <span data-i18n="STMemoryBooks_RpgStatusLastTrigger">Last trigger</span>
+                <span id="stmb-rpg-status-last-trigger">{{rpgMemoryStatus.lastTriggerReason}}</span>
             </div>
         </div>
 
@@ -146,6 +148,34 @@ export const settingsTemplate = Handlebars.compile(`
                 <small class="opacity50p" data-i18n="STMemoryBooks_AutoSummaryBufferDesc">Delay auto-summary by X messages (belated generation). Default 2, max 50.</small>
                 <input type="number" id="stmb-auto-summary-buffer" class="text_pole"
                     value="{{autoSummaryBuffer}}" min="0" max="50" step="1" placeholder="0">
+            </label>
+        </div>
+
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_RpgContentTriggers">RPG Content Triggers</h3>
+
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-rpg-content-triggers-enabled" {{#if rpgContentTriggerSettings.enabled}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_RpgContentTriggersEnabled">Trigger RPG memories from campaign events</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_RpgContentTriggersDesc">Creates RPG memories early when the recent chat contains important canon, quest, entity, relationship, location, or explicit remember-this signals. The fixed interval remains a fallback.</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-rpg-content-trigger-check-cadence">
+                <h4 data-i18n="STMemoryBooks_RpgContentTriggerCheckCadence">Content check cadence:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_RpgContentTriggerCheckCadenceDesc">Minimum new messages before scanning recent RPG content for trigger signals.</small>
+                <input type="number" id="stmb-rpg-content-trigger-check-cadence" class="text_pole"
+                    value="{{rpgContentTriggerSettings.checkCadence}}" min="3" max="50" step="1" placeholder="6">
+            </label>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-rpg-content-trigger-cooldown">
+                <h4 data-i18n="STMemoryBooks_RpgContentTriggerCooldown">Content trigger cooldown:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_RpgContentTriggerCooldownDesc">Minimum messages after a content-triggered memory before another content trigger can fire.</small>
+                <input type="number" id="stmb-rpg-content-trigger-cooldown" class="text_pole"
+                    value="{{rpgContentTriggerSettings.cooldown}}" min="5" max="100" step="1" placeholder="12">
             </label>
         </div>
 
