@@ -608,6 +608,122 @@ function getRpgMemoryStatus(settings, sceneMarkers = null) {
   };
 }
 
+function formatDashboardMessageCount(count) {
+  return `${count} ${translate("messages", "STMemoryBooks_RpgStatusMessages")}`;
+}
+
+function formatRpgTriggerType(type) {
+  const value = String(type || "").trim();
+  if (!value) {
+    return translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  }
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getRpgCampaignDashboard(settings, sceneMarkers = null) {
+  const moduleSettings = settings?.moduleSettings || {};
+  const markers = sceneMarkers || getSceneMarkers() || {};
+  const triggerSettings = normalizeRpgContentTriggerSettings(moduleSettings);
+  const currentMessageCount = chat.length;
+  const currentLastMessage = currentMessageCount - 1;
+  const hasHighestMemoryProcessed = Number.isFinite(markers.highestMemoryProcessed);
+  const highestMemoryProcessed = hasHighestMemoryProcessed
+    ? markers.highestMemoryProcessed
+    : -1;
+  const unprocessedMessages = Math.max(0, currentLastMessage - highestMemoryProcessed);
+  const interval = clampInt(
+    Number.parseInt(moduleSettings.autoSummaryInterval ?? 50, 10) || 50,
+    10,
+    200,
+  );
+  const buffer = clampInt(
+    Number.parseInt(moduleSettings.autoSummaryBuffer ?? 0, 10) || 0,
+    0,
+    50,
+  );
+  const requiredTotal = interval + buffer;
+  const intervalRemaining = Math.max(0, requiredTotal - unprocessedMessages);
+  const intervalProgress = requiredTotal > 0
+    ? Math.min(100, Math.round((unprocessedMessages / requiredTotal) * 100))
+    : 0;
+  const safeEnd = currentLastMessage >= 0
+    ? Math.max(0, currentLastMessage - buffer)
+    : -1;
+  const lastCheck = Number.isFinite(markers.rpgContentLastCheckMessage)
+    ? markers.rpgContentLastCheckMessage
+    : highestMemoryProcessed;
+  const messagesSinceCheck = Math.max(0, safeEnd - lastCheck);
+  const nextCheckIn = Math.max(0, triggerSettings.checkCadence - messagesSinceCheck);
+  const lastTriggered = Number.isFinite(markers.rpgContentLastTriggeredMessage)
+    ? markers.rpgContentLastTriggeredMessage
+    : highestMemoryProcessed;
+  const triggerCooldownRemaining = Math.max(
+    0,
+    triggerSettings.cooldown - Math.max(0, safeEnd - lastTriggered),
+  );
+  const lastTriggerReason =
+    typeof markers.rpgContentLastTriggerReason === "string" &&
+    markers.rpgContentLastTriggerReason.trim()
+      ? markers.rpgContentLastTriggerReason.trim()
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+  const lastTriggerType = formatRpgTriggerType(markers.rpgContentLastTriggerType);
+  const lastTriggerConfidence = Number.isFinite(markers.rpgContentLastTriggerConfidence)
+    ? `${Math.round(markers.rpgContentLastTriggerConfidence * 100)}%`
+    : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone");
+
+  let contentTriggerState;
+  if (!moduleSettings.rpgMemoryModeEnabled) {
+    contentTriggerState = translate("RPG mode disabled", "STMemoryBooks_DashboardRpgDisabled");
+  } else if (!triggerSettings.enabled) {
+    contentTriggerState = translate("Content triggers disabled", "STMemoryBooks_DashboardContentTriggersDisabled");
+  } else if (triggerCooldownRemaining > 0) {
+    contentTriggerState = translate(
+      "Cooldown: {{count}} messages",
+      "STMemoryBooks_DashboardContentTriggerCooldown",
+    ).replace("{{count}}", String(triggerCooldownRemaining));
+  } else if (nextCheckIn > 0) {
+    contentTriggerState = translate(
+      "Next scan in {{count}} messages",
+      "STMemoryBooks_DashboardContentTriggerNextScan",
+    ).replace("{{count}}", String(nextCheckIn));
+  } else {
+    contentTriggerState = translate("Ready to scan", "STMemoryBooks_DashboardContentTriggerReady");
+  }
+
+  return {
+    modeLabel: moduleSettings.rpgMemoryModeEnabled
+      ? translate("Enabled", "STMemoryBooks_RpgStatusEnabled")
+      : translate("Disabled", "STMemoryBooks_RpgStatusDisabled"),
+    triggerModeLabel: triggerSettings.enabled
+      ? translate("Enabled", "STMemoryBooks_RpgStatusEnabled")
+      : translate("Disabled", "STMemoryBooks_RpgStatusDisabled"),
+    contentTriggerState,
+    currentMessageCount: formatDashboardMessageCount(currentMessageCount),
+    unprocessedMessages: formatDashboardMessageCount(unprocessedMessages),
+    intervalProgress,
+    intervalProgressLabel: `${intervalProgress}%`,
+    intervalRemaining: intervalRemaining > 0
+      ? formatDashboardMessageCount(intervalRemaining)
+      : translate("Ready", "STMemoryBooks_DashboardReady"),
+    highestMemoryProcessedLabel: hasHighestMemoryProcessed
+      ? `#${highestMemoryProcessed}`
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone"),
+    lastCheckLabel: Number.isFinite(markers.rpgContentLastCheckMessage)
+      ? `#${markers.rpgContentLastCheckMessage}`
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone"),
+    lastTriggerLabel: Number.isFinite(markers.rpgContentLastTriggeredMessage)
+      ? `#${markers.rpgContentLastTriggeredMessage}`
+      : translate("None yet", "STMemoryBooks_RpgStatusLastProcessedNone"),
+    lastTriggerReason,
+    lastTriggerType,
+    lastTriggerConfidence,
+  };
+}
+
 function getMemoryBoundaryTargetId() {
   const highest = getHighestMemoryProcessed();
   if (!Number.isFinite(highest)) {
@@ -3932,6 +4048,7 @@ function updateLorebookStatusDisplay() {
   }
 
   // Manual lorebook button visibility is now handled by populateInlineButtons()
+  updateRpgCampaignDashboardDisplay();
 }
 
 function updateRpgMemoryStatusDisplay() {
@@ -3952,6 +4069,55 @@ function updateRpgMemoryStatusDisplay() {
   setText("#stmb-rpg-status-buffer", String(status.buffer));
   setText("#stmb-rpg-status-last-processed", status.lastProcessedLabel);
   setText("#stmb-rpg-status-last-trigger", status.lastTriggerReason);
+  updateRpgCampaignDashboardDisplay();
+}
+
+function updateRpgCampaignDashboardDisplay() {
+  const settings = extension_settings.STMemoryBooks;
+  if (!settings) return;
+
+  const dashboard = getRpgCampaignDashboard(settings);
+  const setText = (selector, value) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.textContent = value;
+    }
+  };
+
+  const activeLorebook = document.querySelector("#stmb-dashboard-active-lorebook");
+  if (activeLorebook) {
+    const isManualMode = settings.moduleSettings.manualModeEnabled;
+    const markers = getSceneMarkers() || {};
+    const currentLorebook = isManualMode
+      ? markers.manualLorebook
+      : chat_metadata?.[METADATA_KEY];
+    activeLorebook.textContent =
+      currentLorebook || translate("None selected", "STMemoryBooks_NoneSelected");
+    activeLorebook.className = currentLorebook ? "" : "opacity50p";
+  }
+
+  setText("#stmb-dashboard-mode", dashboard.modeLabel);
+  setText("#stmb-dashboard-chat-size", dashboard.currentMessageCount);
+  setText("#stmb-dashboard-unprocessed", dashboard.unprocessedMessages);
+  setText("#stmb-dashboard-last-processed", dashboard.highestMemoryProcessedLabel);
+  setText("#stmb-dashboard-interval-progress-label", dashboard.intervalProgressLabel);
+  setText("#stmb-dashboard-interval-remaining", dashboard.intervalRemaining);
+  setText("#stmb-dashboard-trigger-state", dashboard.contentTriggerState);
+  setText("#stmb-dashboard-trigger-mode", dashboard.triggerModeLabel);
+  setText("#stmb-dashboard-last-check", dashboard.lastCheckLabel);
+  setText("#stmb-dashboard-last-trigger", dashboard.lastTriggerLabel);
+  setText("#stmb-dashboard-trigger-type", dashboard.lastTriggerType);
+  setText("#stmb-dashboard-trigger-confidence", dashboard.lastTriggerConfidence);
+  setText("#stmb-dashboard-trigger-reason", dashboard.lastTriggerReason);
+
+  const progressTrack = document.querySelector("#stmb-dashboard-interval-progress");
+  if (progressTrack) {
+    progressTrack.setAttribute("aria-valuenow", String(dashboard.intervalProgress));
+  }
+  const progressFill = document.querySelector("#stmb-dashboard-interval-progress-fill");
+  if (progressFill) {
+    progressFill.style.width = `${dashboard.intervalProgress}%`;
+  }
 }
 
 function activateSettingsTab(tabName = currentSettingsTab) {
@@ -6879,6 +7045,7 @@ async function showSettingsPopup() {
       settings.moduleSettings.rpgAutomationPolicy,
     ),
     rpgMemoryStatus: getRpgMemoryStatus(settings, sceneMarkers),
+    rpgCampaignDashboard: getRpgCampaignDashboard(settings, sceneMarkers),
     rpgContentTriggerSettings: normalizeRpgContentTriggerSettings(
       settings.moduleSettings,
     ),
@@ -7429,6 +7596,7 @@ function setupSettingsEventListeners() {
 
     if (e.target.matches("#stmb-rpg-content-triggers-enabled")) {
       settings.moduleSettings.rpgContentTriggersEnabled = e.target.checked;
+      updateRpgCampaignDashboardDisplay();
       saveSettingsDebounced();
       return;
     }
@@ -7479,6 +7647,7 @@ function setupSettingsEventListeners() {
         RPG_MEMORY.CONTENT_TRIGGER.MIN_CHECK_CADENCE,
         RPG_MEMORY.CONTENT_TRIGGER.MAX_CHECK_CADENCE,
       );
+      updateRpgCampaignDashboardDisplay();
       saveSettingsDebounced();
       return;
     }
@@ -7490,6 +7659,7 @@ function setupSettingsEventListeners() {
         RPG_MEMORY.CONTENT_TRIGGER.MIN_COOLDOWN,
         RPG_MEMORY.CONTENT_TRIGGER.MAX_COOLDOWN,
       );
+      updateRpgCampaignDashboardDisplay();
       saveSettingsDebounced();
       return;
     }
@@ -8005,6 +8175,7 @@ async function refreshPopupContent() {
         settings.moduleSettings.rpgAutomationPolicy,
       ),
       rpgMemoryStatus: getRpgMemoryStatus(settings, sceneMarkers),
+      rpgCampaignDashboard: getRpgCampaignDashboard(settings, sceneMarkers),
       rpgContentTriggerSettings: normalizeRpgContentTriggerSettings(
         settings.moduleSettings,
       ),

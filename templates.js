@@ -16,6 +16,71 @@ export const settingsTemplate = Handlebars.compile(`
 
     <div class="stmb-settings-panel active" data-stmb-panel="campaign" role="tabpanel">
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CampaignOverview">Campaign Overview</h3>
+
+        <div class="stmb-campaign-dashboard">
+            <div class="stmb-dashboard-header">
+                <div>
+                    <h4 data-i18n="STMemoryBooks_DashboardTitle">Campaign Memory Dashboard</h4>
+                    <small class="opacity50p" data-i18n="STMemoryBooks_DashboardDesc">Operational status for automatic campaign memory and content-aware triggers.</small>
+                </div>
+                <div class="stmb-dashboard-status">
+                    <span data-i18n="STMemoryBooks_RpgStatusMode">Mode</span>
+                    <strong id="stmb-dashboard-mode">{{rpgCampaignDashboard.modeLabel}}</strong>
+                </div>
+            </div>
+
+            <div class="stmb-dashboard-grid">
+                <div class="stmb-dashboard-metric">
+                    <span data-i18n="STMemoryBooks_DashboardActiveLorebook">Active lorebook</span>
+                    <strong id="stmb-dashboard-active-lorebook">{{#if currentLorebookName}}{{currentLorebookName}}{{else}}<span data-i18n="STMemoryBooks_NoneSelected">None selected</span>{{/if}}</strong>
+                </div>
+                <div class="stmb-dashboard-metric">
+                    <span data-i18n="STMemoryBooks_DashboardChatSize">Chat size</span>
+                    <strong id="stmb-dashboard-chat-size">{{rpgCampaignDashboard.currentMessageCount}}</strong>
+                </div>
+                <div class="stmb-dashboard-metric">
+                    <span data-i18n="STMemoryBooks_DashboardUnprocessed">Unprocessed</span>
+                    <strong id="stmb-dashboard-unprocessed">{{rpgCampaignDashboard.unprocessedMessages}}</strong>
+                </div>
+                <div class="stmb-dashboard-metric">
+                    <span data-i18n="STMemoryBooks_DashboardLastProcessed">Last processed</span>
+                    <strong id="stmb-dashboard-last-processed">{{rpgCampaignDashboard.highestMemoryProcessedLabel}}</strong>
+                </div>
+            </div>
+
+            <div class="stmb-dashboard-progress">
+                <div class="stmb-dashboard-progress-label">
+                    <span data-i18n="STMemoryBooks_DashboardFallbackProgress">Interval fallback progress</span>
+                    <strong id="stmb-dashboard-interval-progress-label">{{rpgCampaignDashboard.intervalProgressLabel}}</strong>
+                </div>
+                <div id="stmb-dashboard-interval-progress" class="stmb-dashboard-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{rpgCampaignDashboard.intervalProgress}}">
+                    <div id="stmb-dashboard-interval-progress-fill" class="stmb-dashboard-progress-fill" style="width: {{rpgCampaignDashboard.intervalProgress}}%;"></div>
+                </div>
+                <small class="opacity50p"><span data-i18n="STMemoryBooks_DashboardFallbackRemaining">Remaining until interval fallback</span>: <span id="stmb-dashboard-interval-remaining">{{rpgCampaignDashboard.intervalRemaining}}</span></small>
+            </div>
+
+            <div class="stmb-dashboard-trigger">
+                <div class="stmb-dashboard-trigger-main">
+                    <span data-i18n="STMemoryBooks_DashboardContentTriggerState">Content trigger state</span>
+                    <strong id="stmb-dashboard-trigger-state">{{rpgCampaignDashboard.contentTriggerState}}</strong>
+                </div>
+                <div class="stmb-dashboard-trigger-grid">
+                    <span data-i18n="STMemoryBooks_RpgContentTriggers">RPG Content Triggers</span>
+                    <strong id="stmb-dashboard-trigger-mode">{{rpgCampaignDashboard.triggerModeLabel}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardLastCheck">Last scan</span>
+                    <strong id="stmb-dashboard-last-check">{{rpgCampaignDashboard.lastCheckLabel}}</strong>
+                    <span data-i18n="STMemoryBooks_RpgStatusLastTrigger">Last trigger</span>
+                    <strong id="stmb-dashboard-last-trigger">{{rpgCampaignDashboard.lastTriggerLabel}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardTriggerType">Trigger type</span>
+                    <strong id="stmb-dashboard-trigger-type">{{rpgCampaignDashboard.lastTriggerType}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardTriggerConfidence">Confidence</span>
+                    <strong id="stmb-dashboard-trigger-confidence">{{rpgCampaignDashboard.lastTriggerConfidence}}</strong>
+                    <span data-i18n="STMemoryBooks_DashboardTriggerReason">Reason</span>
+                    <strong id="stmb-dashboard-trigger-reason">{{rpgCampaignDashboard.lastTriggerReason}}</strong>
+                </div>
+            </div>
+        </div>
+
         {{#if hasScene}}
         <div id="stmb-scene" class="padding10 marginBot10">
             <div class="marginBot5" data-i18n="STMemoryBooks_CurrentScene">Current Scene:</div>

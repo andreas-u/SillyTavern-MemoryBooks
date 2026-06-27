@@ -51,8 +51,13 @@ Manual smoke-test checklist:
 
 Goal: replace toolbox-first orientation with a campaign-first overview.
 
-- [ ] Add a compact dashboard section near the top of settings.
+- [x] Add a compact dashboard section near the top of settings.
 - [ ] Show current campaign memory state:
+  - [x] trigger readiness
+  - [x] active lorebook
+  - [x] memory coverage / unprocessed messages
+  - [x] interval fallback progress
+  - [x] recent content trigger activity
   - [ ] current situation
   - [ ] active arcs
   - [ ] unresolved threads
@@ -60,7 +65,7 @@ Goal: replace toolbox-first orientation with a campaign-first overview.
   - [ ] current location
   - [ ] party state
   - [ ] recent memory activity
-- [ ] Reuse existing lorebook/memory data first; avoid creating a new storage model until needed.
+- [x] Reuse existing lorebook/memory data first; avoid creating a new storage model until needed.
 - [ ] Add empty states that explain what will appear after memories exist.
 - [ ] Keep old controls accessible below the dashboard or behind an Advanced Tools area.
 
