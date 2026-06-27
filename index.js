@@ -105,6 +105,7 @@ import {
 import * as SummaryPromptManager from "./summaryPromptManager.js";
 import {
   MEMORY_GENERATION,
+  RPG_MEMORY,
   SCENE_MANAGEMENT,
   UI_SETTINGS,
 } from "./constants.js";
@@ -373,6 +374,9 @@ const MEMORY_BOUNDARY_BUTTON_SIZE = 36;
 const MEMORY_BOUNDARY_BUTTON_MARGIN = 12;
 const MEMORY_BOUNDARY_BUTTON_DEFAULT_BOTTOM = 112;
 const MEMORY_BOUNDARY_BUTTON_DEFAULT_RIGHT = 18;
+const RPG_AUTOMATION_POLICY_VALUES = new Set(
+  Object.values(RPG_MEMORY.AUTOMATION_POLICIES),
+);
 
 const defaultSettings = {
   moduleSettings: {
@@ -396,6 +400,8 @@ const defaultSettings = {
     autoSummaryEnabled: false,
     autoSummaryInterval: 50,
     autoSummaryBuffer: 2,
+    rpgMemoryModeEnabled: false,
+    rpgAutomationPolicy: RPG_MEMORY.DEFAULT_AUTOMATION_POLICY,
     autoConsolidationPromptEnabled: false,
     autoConsolidationTargetTiers: [1],
     autoCreateLorebook: false,
@@ -451,6 +457,13 @@ function normalizeMemoryBoundaryMode(mode) {
   return MEMORY_BOUNDARY_MODE_VALUES.has(value) ? value : DEFAULT_MEMORY_BOUNDARY_MODE;
 }
 
+function normalizeRpgAutomationPolicy(policy) {
+  const value = String(policy ?? "");
+  return RPG_AUTOMATION_POLICY_VALUES.has(value)
+    ? value
+    : RPG_MEMORY.DEFAULT_AUTOMATION_POLICY;
+}
+
 function isMemoryBoundaryDividerEnabled(mode = null) {
   const normalized = normalizeMemoryBoundaryMode(mode ?? extension_settings?.STMemoryBooks?.moduleSettings?.memoryBoundaryMode);
   return normalized === MEMORY_BOUNDARY_MODES.DIVIDER || normalized === MEMORY_BOUNDARY_MODES.BOTH;
@@ -485,6 +498,27 @@ function getMemoryBoundaryModeOptions(selectedMode) {
       isSelected: selected === MEMORY_BOUNDARY_MODES.BOTH,
     },
   ];
+}
+
+function getRpgAutomationPolicyOptions(selectedPolicy) {
+  const selected = normalizeRpgAutomationPolicy(selectedPolicy);
+  return [
+    {
+      value: RPG_MEMORY.AUTOMATION_POLICIES.SILENT,
+      label: translate("Silent", "STMemoryBooks_RpgAutomationSilent"),
+    },
+    {
+      value: RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR,
+      label: translate("Review major changes", "STMemoryBooks_RpgAutomationReviewMajor"),
+    },
+    {
+      value: RPG_MEMORY.AUTOMATION_POLICIES.MANUAL,
+      label: translate("Manual / review everything", "STMemoryBooks_RpgAutomationManual"),
+    },
+  ].map((option) => ({
+    ...option,
+    isSelected: option.value === selected,
+  }));
 }
 
 function getMemoryBoundaryTargetId() {
@@ -2004,6 +2038,12 @@ function validateSettings(settings) {
   if (settings.moduleSettings.autoSummaryEnabled === undefined) {
     settings.moduleSettings.autoSummaryEnabled = false;
   }
+  if (settings.moduleSettings.rpgMemoryModeEnabled === undefined) {
+    settings.moduleSettings.rpgMemoryModeEnabled = false;
+  }
+  settings.moduleSettings.rpgAutomationPolicy = normalizeRpgAutomationPolicy(
+    settings.moduleSettings.rpgAutomationPolicy,
+  );
   if (
     settings.moduleSettings.autoSummaryInterval === undefined ||
     settings.moduleSettings.autoSummaryInterval < 10
@@ -6694,6 +6734,13 @@ async function showSettingsPopup() {
     tokenWarningThreshold:
       settings.moduleSettings.tokenWarningThreshold ?? 50000,
     defaultMemoryCount: settings.moduleSettings.defaultMemoryCount ?? 0,
+    rpgMemoryModeEnabled: settings.moduleSettings.rpgMemoryModeEnabled ?? false,
+    rpgAutomationPolicy: normalizeRpgAutomationPolicy(
+      settings.moduleSettings.rpgAutomationPolicy,
+    ),
+    rpgAutomationPolicyOptions: getRpgAutomationPolicyOptions(
+      settings.moduleSettings.rpgAutomationPolicy,
+    ),
     autoSummaryEnabled: settings.moduleSettings.autoSummaryEnabled ?? false,
     autoSummaryInterval: settings.moduleSettings.autoSummaryInterval ?? 50,
     autoSummaryBuffer: settings.moduleSettings.autoSummaryBuffer ?? 2,
@@ -7201,6 +7248,61 @@ function setupSettingsEventListeners() {
       return;
     }
 
+    if (e.target.matches("#stmb-rpg-memory-mode-enabled")) {
+      settings.moduleSettings.rpgMemoryModeEnabled = e.target.checked;
+      if (e.target.checked) {
+        settings.moduleSettings.autoSummaryEnabled = true;
+        if (
+          normalizeRpgAutomationPolicy(settings.moduleSettings.rpgAutomationPolicy) !==
+          RPG_MEMORY.AUTOMATION_POLICIES.SILENT
+        ) {
+          settings.moduleSettings.showMemoryPreviews = true;
+          const showMemoryPreviewsCheckbox = popupElement.querySelector(
+            "#stmb-show-memory-previews",
+          );
+          if (showMemoryPreviewsCheckbox) {
+            showMemoryPreviewsCheckbox.checked = true;
+          }
+        }
+        const autoSummaryCheckbox = popupElement.querySelector(
+          "#stmb-auto-summary-enabled",
+        );
+        if (autoSummaryCheckbox) {
+          autoSummaryCheckbox.checked = true;
+        }
+      }
+      const policySelect = popupElement.querySelector(
+        "#stmb-rpg-automation-policy",
+      );
+      if (policySelect) {
+        policySelect.disabled = !e.target.checked;
+      }
+      saveSettingsDebounced();
+      return;
+    }
+
+    if (e.target.matches("#stmb-rpg-automation-policy")) {
+      settings.moduleSettings.rpgAutomationPolicy = normalizeRpgAutomationPolicy(
+        e.target.value,
+      );
+      if (
+        settings.moduleSettings.rpgAutomationPolicy ===
+          RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR ||
+        settings.moduleSettings.rpgAutomationPolicy ===
+          RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
+      ) {
+        settings.moduleSettings.showMemoryPreviews = true;
+        const showMemoryPreviewsCheckbox = popupElement.querySelector(
+          "#stmb-show-memory-previews",
+        );
+        if (showMemoryPreviewsCheckbox) {
+          showMemoryPreviewsCheckbox.checked = true;
+        }
+      }
+      saveSettingsDebounced();
+      return;
+    }
+
     if (e.target.matches("#stmb-auto-create-lorebook")) {
       const isEnabling = e.target.checked;
 
@@ -7372,6 +7474,13 @@ function persistMainPopupSettings(popupElement) {
   const autoSummaryEnabled =
     popupElement.querySelector("#stmb-auto-summary-enabled")?.checked ??
     settings.moduleSettings.autoSummaryEnabled;
+  const rpgMemoryModeEnabled =
+    popupElement.querySelector("#stmb-rpg-memory-mode-enabled")?.checked ??
+    settings.moduleSettings.rpgMemoryModeEnabled;
+  const rpgAutomationPolicy = normalizeRpgAutomationPolicy(
+    popupElement.querySelector("#stmb-rpg-automation-policy")?.value ??
+      settings.moduleSettings.rpgAutomationPolicy,
+  );
   const autoCreateLorebook =
     popupElement.querySelector("#stmb-auto-create-lorebook")?.checked ??
     settings.moduleSettings.autoCreateLorebook;
@@ -7484,6 +7593,31 @@ function persistMainPopupSettings(popupElement) {
 
   if (autoSummaryEnabled !== settings.moduleSettings.autoSummaryEnabled) {
     settings.moduleSettings.autoSummaryEnabled = autoSummaryEnabled;
+    hasChanges = true;
+  }
+
+  if (rpgMemoryModeEnabled !== settings.moduleSettings.rpgMemoryModeEnabled) {
+    settings.moduleSettings.rpgMemoryModeEnabled = rpgMemoryModeEnabled;
+    if (rpgMemoryModeEnabled) {
+      settings.moduleSettings.autoSummaryEnabled = true;
+      if (rpgAutomationPolicy !== RPG_MEMORY.AUTOMATION_POLICIES.SILENT) {
+        settings.moduleSettings.showMemoryPreviews = true;
+      }
+    }
+    hasChanges = true;
+  }
+
+  if (
+    rpgAutomationPolicy !==
+    normalizeRpgAutomationPolicy(settings.moduleSettings.rpgAutomationPolicy)
+  ) {
+    settings.moduleSettings.rpgAutomationPolicy = rpgAutomationPolicy;
+    if (
+      rpgAutomationPolicy === RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR ||
+      rpgAutomationPolicy === RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
+    ) {
+      settings.moduleSettings.showMemoryPreviews = true;
+    }
     hasChanges = true;
   }
 
@@ -7669,6 +7803,13 @@ async function refreshPopupContent() {
       tokenWarningThreshold:
         settings.moduleSettings.tokenWarningThreshold ?? 50000,
       defaultMemoryCount: settings.moduleSettings.defaultMemoryCount ?? 0,
+      rpgMemoryModeEnabled: settings.moduleSettings.rpgMemoryModeEnabled ?? false,
+      rpgAutomationPolicy: normalizeRpgAutomationPolicy(
+        settings.moduleSettings.rpgAutomationPolicy,
+      ),
+      rpgAutomationPolicyOptions: getRpgAutomationPolicyOptions(
+        settings.moduleSettings.rpgAutomationPolicy,
+      ),
       autoSummaryEnabled: settings.moduleSettings.autoSummaryEnabled ?? false,
       autoSummaryInterval: settings.moduleSettings.autoSummaryInterval ?? 50,
       autoSummaryBuffer: settings.moduleSettings.autoSummaryBuffer ?? 0,

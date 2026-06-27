@@ -226,6 +226,28 @@ export const settingsTemplate = Handlebars.compile(`
             </label>
         </div>
 
+        <h3 class="stmb-section-title" data-i18n="STMemoryBooks_RpgCampaignMemory">RPG Campaign Memory</h3>
+
+        <div class="world_entry_form_control">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-rpg-memory-mode-enabled" {{#if rpgMemoryModeEnabled}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_RpgMemoryModeEnabled">Enable automatic RPG campaign memory mode</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_RpgMemoryModeDesc">Uses Auto-Summary as the first campaign memory engine while RPG-specific memory tools are added.</small>
+        </div>
+
+        <div class="world_entry_form_control">
+            <label for="stmb-rpg-automation-policy">
+                <h4 data-i18n="STMemoryBooks_RpgAutomationPolicy">Automation Policy:</h4>
+                <small class="opacity50p" data-i18n="STMemoryBooks_RpgAutomationPolicyDesc">Choose whether campaign memory updates happen silently or wait for review.</small>
+                <select id="stmb-rpg-automation-policy" class="text_pole" {{#unless rpgMemoryModeEnabled}}disabled{{/unless}}>
+                    {{#each rpgAutomationPolicyOptions}}
+                    <option value="{{value}}" {{#if isSelected}}selected{{/if}}>{{label}}</option>
+                    {{/each}}
+                </select>
+            </label>
+        </div>
+
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_AutoMemory">Automatic Memories</h3>
 
         <div class="world_entry_form_control">

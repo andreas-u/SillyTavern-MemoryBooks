@@ -7,6 +7,7 @@ import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { isMemoryProcessing } from './index.js';
 import { translate } from '../../../i18n.js';
 import { validateLorebookRequirement } from './lorebookValidation.js';
+import { RPG_MEMORY } from './constants.js';
 
 let autoSummarySkippedForProcessing = false;
 let autoSummarySkippedMarkersRef = null;
@@ -104,6 +105,43 @@ async function validateLorebookForAutoSummary() {
     });
 }
 
+function isRpgAutoMemoryEnabled(settings) {
+    return !!settings?.moduleSettings?.autoSummaryEnabled ||
+        !!settings?.moduleSettings?.rpgMemoryModeEnabled;
+}
+
+function getRpgAutomationPolicy(settings) {
+    const policy = String(settings?.moduleSettings?.rpgAutomationPolicy || '');
+    return Object.values(RPG_MEMORY.AUTOMATION_POLICIES).includes(policy)
+        ? policy
+        : RPG_MEMORY.DEFAULT_AUTOMATION_POLICY;
+}
+
+async function confirmRpgManualAutoSummary(sceneStart, sceneEnd) {
+    const rangeText = i18n(
+        'STMemoryBooks_RpgManualReviewReadyDescRange',
+        'RPG campaign memory mode is ready to create a memory for messages {{start}}-{{end}}.',
+        { start: sceneStart, end: sceneEnd },
+    );
+    const questionText = i18n(
+        'STMemoryBooks_RpgManualReviewQuestion',
+        'Create it now, or postpone the check?',
+    );
+    const popupContent = `
+        <h4 data-i18n="STMemoryBooks_RpgManualReviewReadyTitle">RPG Memory Ready</h4>
+        <div class="world_entry_form_control">
+            <p>${rangeText}</p>
+            <p>${questionText}</p>
+        </div>
+    `;
+    const popup = new Popup(popupContent, POPUP_TYPE.TEXT, '', {
+        okButton: i18n('STMemoryBooks_Button_CreateMemory', 'Create Memory'),
+        cancelButton: i18n('STMemoryBooks_Button_Postpone', 'Postpone'),
+    });
+    const result = await popup.show();
+    return result === POPUP_RESULT.AFFIRMATIVE;
+}
+
 /**
  * Check if auto-summary should trigger based on current message count and settings
  * @returns {Promise<void>}
@@ -111,7 +149,7 @@ async function validateLorebookForAutoSummary() {
 async function checkAutoSummaryTrigger() {
     try {
         const settings = extension_settings.STMemoryBooks;
-        if (!settings?.moduleSettings?.autoSummaryEnabled) {
+        if (!isRpgAutoMemoryEnabled(settings)) {
             return;
         }
 
@@ -187,6 +225,19 @@ async function checkAutoSummaryTrigger() {
 
         console.log(i18n('autosummary.log.triggered', 'STMemoryBooks: Auto-summary triggered - creating memory for range {{start}}-{{end}}', { start: sceneStart, end: sceneEnd }));
 
+        if (
+            settings?.moduleSettings?.rpgMemoryModeEnabled &&
+            getRpgAutomationPolicy(settings) === RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
+        ) {
+            const confirmed = await confirmRpgManualAutoSummary(sceneStart, sceneEnd);
+            if (!confirmed) {
+                stmbData.autoSummaryNextPromptAt = currentMessageCount + 10;
+                saveMetadataForCurrentContext();
+                console.log(i18n('autosummary.log.rpgManualPostponed', 'STMemoryBooks: RPG memory creation postponed for 10 messages'));
+                return;
+            }
+        }
+
         // Set scene markers for the range we want to process
         stmbData.sceneStart = sceneStart;
         stmbData.sceneEnd = sceneEnd;
@@ -206,7 +257,7 @@ async function checkAutoSummaryTrigger() {
  */
 export async function handleAutoSummaryMessageReceived() {
     try {
-        if (extension_settings.STMemoryBooks?.moduleSettings?.autoSummaryEnabled) {
+        if (isRpgAutoMemoryEnabled(extension_settings.STMemoryBooks)) {
             const currentMessageCount = chat.length;
             console.log(i18n('autosummary.log.messageReceivedSingle', 'STMemoryBooks: Message received - auto-summary enabled, current count: {{count}}', { count: currentMessageCount }));
 
@@ -244,7 +295,7 @@ export async function retryAutoSummaryAfterJobIdle() {
  * @returns {void}
  */
 export function clearAutoSummaryState() {
-    if (extension_settings.STMemoryBooks?.moduleSettings?.autoSummaryEnabled) {
+    if (isRpgAutoMemoryEnabled(extension_settings.STMemoryBooks)) {
         // Clear scene markers; baseline is updated upon successful memory creation
         clearScene();
     }

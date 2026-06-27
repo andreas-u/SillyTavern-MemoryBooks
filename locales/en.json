@@ -1,2 +1,14 @@
 {
+  "STMemoryBooks_RpgCampaignMemory": "RPG Campaign Memory",
+  "STMemoryBooks_RpgMemoryModeEnabled": "Enable automatic RPG campaign memory mode",
+  "STMemoryBooks_RpgMemoryModeDesc": "Uses Auto-Summary as the first campaign memory engine while RPG-specific memory tools are added.",
+  "STMemoryBooks_RpgAutomationPolicy": "Automation Policy:",
+  "STMemoryBooks_RpgAutomationPolicyDesc": "Choose whether campaign memory updates happen silently or wait for review.",
+  "STMemoryBooks_RpgAutomationSilent": "Silent",
+  "STMemoryBooks_RpgAutomationReviewMajor": "Review major changes",
+  "STMemoryBooks_RpgAutomationManual": "Manual / review everything",
+  "STMemoryBooks_RpgManualReviewReadyTitle": "RPG Memory Ready",
+  "STMemoryBooks_RpgManualReviewReadyDesc": "RPG campaign memory mode is ready to create a memory for the selected message range.",
+  "STMemoryBooks_RpgManualReviewReadyDescRange": "RPG campaign memory mode is ready to create a memory for messages {{start}}-{{end}}.",
+  "STMemoryBooks_RpgManualReviewQuestion": "Create it now, or postpone the check?"
 }

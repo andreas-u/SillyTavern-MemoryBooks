@@ -31,6 +31,16 @@ export const UI_SETTINGS = {
     CHAT_OBSERVER_DEBOUNCE_MS: 50,
 };
 
+// RPG campaign memory settings
+export const RPG_MEMORY = {
+    AUTOMATION_POLICIES: Object.freeze({
+        SILENT: 'silent',
+        REVIEW_MAJOR: 'review_major',
+        MANUAL: 'manual',
+    }),
+    DEFAULT_AUTOMATION_POLICY: 'review_major',
+};
+
 // File names
 export const FILE_NAMES = {
     PROMPTS_FILE: 'stmb-summary-prompts.json',
