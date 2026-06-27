@@ -464,6 +464,21 @@ function normalizeRpgAutomationPolicy(policy) {
     : RPG_MEMORY.DEFAULT_AUTOMATION_POLICY;
 }
 
+function shouldShowMemoryPreview(settings) {
+  const moduleSettings = settings?.moduleSettings || settings || {};
+  if (moduleSettings.showMemoryPreviews) {
+    return true;
+  }
+  if (!moduleSettings.rpgMemoryModeEnabled) {
+    return false;
+  }
+  const policy = normalizeRpgAutomationPolicy(moduleSettings.rpgAutomationPolicy);
+  return (
+    policy === RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR ||
+    policy === RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
+  );
+}
+
 function isMemoryBoundaryDividerEnabled(mode = null) {
   const normalized = normalizeMemoryBoundaryMode(mode ?? extension_settings?.STMemoryBooks?.moduleSettings?.memoryBoundaryMode);
   return normalized === MEMORY_BOUNDARY_MODES.DIVIDER || normalized === MEMORY_BOUNDARY_MODES.BOTH;
@@ -1159,7 +1174,7 @@ async function validateStmbCatchupNonInteractive(settings, chunks) {
     );
   }
 
-  if (moduleSettings.showMemoryPreviews) {
+  if (shouldShowMemoryPreview(moduleSettings)) {
     return translate(
       "/stmb-catchup is non-interactive. Disable memory previews before running it.",
       "STMemoryBooks_CatchupRequiresNoPreviews",
@@ -2579,7 +2594,7 @@ async function executeMemoryGeneration(
     // Check if memory previews are enabled and handle accordingly
     let finalMemoryResult = memoryResult;
 
-    if (settings.moduleSettings.showMemoryPreviews) {
+    if (shouldShowMemoryPreview(settings)) {
       // Clear working toast before showing preview popup
       toastr.clear();
 
@@ -3113,7 +3128,7 @@ async function executeQueuedMemoryJob(job, jobContext) {
   jobContext.throwIfCancelled();
 
   let finalMemoryResult = memoryResult;
-  if (settings.moduleSettings?.showMemoryPreviews) {
+  if (shouldShowMemoryPreview(settings)) {
     const approval = await awaitStmbJobApproval(
       jobContext,
       {
@@ -7252,18 +7267,6 @@ function setupSettingsEventListeners() {
       settings.moduleSettings.rpgMemoryModeEnabled = e.target.checked;
       if (e.target.checked) {
         settings.moduleSettings.autoSummaryEnabled = true;
-        if (
-          normalizeRpgAutomationPolicy(settings.moduleSettings.rpgAutomationPolicy) !==
-          RPG_MEMORY.AUTOMATION_POLICIES.SILENT
-        ) {
-          settings.moduleSettings.showMemoryPreviews = true;
-          const showMemoryPreviewsCheckbox = popupElement.querySelector(
-            "#stmb-show-memory-previews",
-          );
-          if (showMemoryPreviewsCheckbox) {
-            showMemoryPreviewsCheckbox.checked = true;
-          }
-        }
         const autoSummaryCheckbox = popupElement.querySelector(
           "#stmb-auto-summary-enabled",
         );
@@ -7285,20 +7288,6 @@ function setupSettingsEventListeners() {
       settings.moduleSettings.rpgAutomationPolicy = normalizeRpgAutomationPolicy(
         e.target.value,
       );
-      if (
-        settings.moduleSettings.rpgAutomationPolicy ===
-          RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR ||
-        settings.moduleSettings.rpgAutomationPolicy ===
-          RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
-      ) {
-        settings.moduleSettings.showMemoryPreviews = true;
-        const showMemoryPreviewsCheckbox = popupElement.querySelector(
-          "#stmb-show-memory-previews",
-        );
-        if (showMemoryPreviewsCheckbox) {
-          showMemoryPreviewsCheckbox.checked = true;
-        }
-      }
       saveSettingsDebounced();
       return;
     }
@@ -7600,9 +7589,6 @@ function persistMainPopupSettings(popupElement) {
     settings.moduleSettings.rpgMemoryModeEnabled = rpgMemoryModeEnabled;
     if (rpgMemoryModeEnabled) {
       settings.moduleSettings.autoSummaryEnabled = true;
-      if (rpgAutomationPolicy !== RPG_MEMORY.AUTOMATION_POLICIES.SILENT) {
-        settings.moduleSettings.showMemoryPreviews = true;
-      }
     }
     hasChanges = true;
   }
@@ -7612,12 +7598,6 @@ function persistMainPopupSettings(popupElement) {
     normalizeRpgAutomationPolicy(settings.moduleSettings.rpgAutomationPolicy)
   ) {
     settings.moduleSettings.rpgAutomationPolicy = rpgAutomationPolicy;
-    if (
-      rpgAutomationPolicy === RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR ||
-      rpgAutomationPolicy === RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
-    ) {
-      settings.moduleSettings.showMemoryPreviews = true;
-    }
     hasChanges = true;
   }
 
