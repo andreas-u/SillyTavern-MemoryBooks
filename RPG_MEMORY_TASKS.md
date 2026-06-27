@@ -90,7 +90,49 @@ Acceptance criteria:
 - A user can select a preset and get a sensible memory configuration without manually tuning every Memory Books subsystem.
 - Presets are reversible and do not destroy custom user profiles.
 
-## Milestone 4: Memory Inbox
+## Milestone 4: Content-Aware Memory Triggers
+
+Goal: trigger RPG memory generation from meaningful campaign events rather than only from a fixed message count.
+
+- [ ] Define trigger classifier output schema:
+  - [ ] should create memory
+  - [ ] confidence
+  - [ ] urgency
+  - [ ] reason
+  - [ ] memory type
+  - [ ] suggested message range
+  - [ ] review required
+- [ ] Add trigger types:
+  - [ ] scene boundary
+  - [ ] canon event
+  - [ ] entity update
+  - [ ] quest/thread progress
+  - [ ] relationship shift
+  - [ ] location/time transition
+  - [ ] user importance signal
+- [ ] Store last content-trigger check position per chat.
+- [ ] Add minimum cooldown so trigger checks cannot spam memory generation.
+- [ ] Keep fixed interval as a fallback max interval.
+- [ ] Route trigger decisions through RPG automation policy:
+  - [ ] `silent`: auto-save high-confidence low-risk updates
+  - [ ] `review_major`: review major canon changes
+  - [ ] `manual`: ask before generation
+- [ ] Add settings for content-aware triggering:
+  - [ ] enabled/disabled
+  - [ ] check cadence
+  - [ ] fallback interval
+  - [ ] review sensitivity
+- [ ] Add concise status/UI feedback showing why a memory was triggered.
+- [ ] Add manual verification cases for content-triggered memories.
+
+Acceptance criteria:
+
+- RPG mode can create memory after meaningful story events even before the fixed interval is reached.
+- Quiet or repetitive chat does not produce unnecessary memories.
+- Fixed interval still prevents long stretches from going unsummarized.
+- Trigger decisions remain auditable through status, preview, inbox, or history depending on policy.
+
+## Milestone 5: Memory Inbox
 
 Goal: handle uncertain or high-risk memory updates without interrupting roleplay.
 
@@ -114,7 +156,7 @@ Acceptance criteria:
 - RPG mode can continue quietly while reviewable items accumulate.
 - Users can resolve pending memory decisions in batches.
 
-## Milestone 5: Entity And State Memory
+## Milestone 6: Entity And State Memory
 
 Goal: promote important RPG entities from generic summaries into first-class campaign memory.
 
@@ -141,7 +183,7 @@ Acceptance criteria:
 - Recurring NPCs, places, factions, items, and quests can be updated without relying only on chronological scene summaries.
 - Entity updates preserve user edits and do not overwrite canon without review when policy requires it.
 
-## Milestone 6: Session Briefing
+## Milestone 7: Session Briefing
 
 Goal: provide a compact "what matters now" packet before continuing play.
 
@@ -156,7 +198,7 @@ Acceptance criteria:
 - A returning user can quickly understand campaign state without rereading old chat.
 - Briefing can be regenerated without corrupting underlying memory.
 
-## Milestone 7: Memory Health And Audit
+## Milestone 8: Memory Health And Audit
 
 Goal: make long-running campaign memory trustworthy.
 
@@ -177,7 +219,7 @@ Acceptance criteria:
 - Users can see when campaign memory quality is degrading.
 - Automated repair does not silently rewrite important canon.
 
-## Milestone 8: Undo And History
+## Milestone 9: Undo And History
 
 Goal: make automation safe enough to trust.
 
@@ -195,7 +237,7 @@ Acceptance criteria:
 - A bad automation decision can be traced and reverted.
 - History records enough context to understand why an update happened.
 
-## Milestone 9: Advanced Tools Reorganization
+## Milestone 10: Advanced Tools Reorganization
 
 Goal: keep Memory Books power-user features while making RPG automation the primary workflow.
 
