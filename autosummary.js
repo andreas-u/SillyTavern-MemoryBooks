@@ -291,6 +291,7 @@ async function checkAutoSummaryTrigger() {
             stmbData.rpgContentLastMemoryScope = contentTrigger.memoryScope || contentTrigger.scratchpadSignal?.scope || '';
             stmbData.rpgContentLastTemporalAnchor = contentTrigger.temporalAnchor || contentTrigger.scratchpadSignal?.temporalAnchor || '';
             stmbData.rpgContentLastScratchpadState = contentTrigger.scratchpadSignal?.state || '';
+            stmbData.rpgContentLastReviewRequired = contentTrigger.reviewRequired === true;
         }
         saveMetadataForCurrentContext();
 

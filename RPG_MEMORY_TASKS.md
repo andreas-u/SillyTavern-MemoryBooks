@@ -13,8 +13,11 @@ Manual Memory Books tools should remain available, but the default product path 
 - Existing Memory Books behavior must keep working.
 - `rpg-auto-memory` already has the first RPG mode shell:
   - RPG Campaign Memory settings section.
+  - Campaign dashboard with active lorebook, trigger status, interval fallback progress, latest scratchpad scene state, active arcs, offstage motion, cutaway candidate, and narrator notes.
   - Automation policy values: `silent`, `review_major`, `manual`.
   - RPG mode uses Auto-Summary as the first memory engine.
+  - Content-aware RPG triggers run before the fixed interval fallback.
+  - Scene Scratchpad parsing supports explicit `Memory Trigger` blocks with `State`, `Type`, `Reason`, `Memory Scope`, and `Temporal Anchor`.
   - Review policies route generated memories through preview/review without mutating the global preview setting.
 - The installed extension loads `index.build.js`, so source changes need a rebuild before testing in SillyTavern.
 
@@ -28,6 +31,10 @@ Goal: make the current RPG mode reliable enough to use in real chats without cha
   - [ ] `silent`: creates memories without review when normal Auto-Summary conditions are met.
   - [ ] `review_major`: sends generated memories through review before saving.
   - [ ] `manual`: asks before generation and sends generated memories through review.
+- [ ] Verify each automation policy for content-triggered memories:
+  - [ ] `silent`: creates high-confidence low-risk content-triggered memories without review.
+  - [ ] `review_major`: reviews major/required scratchpad-triggered memories before saving.
+  - [ ] `manual`: asks before content-triggered generation and sends generated memories through review.
 - [x] Clarify UI copy for RPG mode so users understand it is currently powered by Auto-Summary.
 - [x] Add a visible status line for RPG mode showing enabled/disabled, policy, interval, buffer, and last processed message.
 - [x] Add a small smoke-test checklist for manual SillyTavern verification.
@@ -46,6 +53,9 @@ Manual smoke-test checklist:
 - Set policy to `silent`, roleplay past interval + buffer, and confirm a memory is created without a review popup.
 - Set policy to `review_major`, roleplay past interval + buffer, and confirm the generated memory goes through preview/review.
 - Set policy to `manual`, roleplay past interval + buffer, and confirm the create/postpone prompt appears before review.
+- With a scratchpad `Memory Trigger` set to `State: required`, confirm the next memory includes trigger reason, scope, and temporal anchor in the generation context.
+- With scratchpad `State: none`, confirm present-state scratchpad churn does not create a memory by itself.
+- With scratchpad `State: candidate`, confirm the dashboard shows the candidate signal and memory creation still requires another confirming trigger or fallback.
 
 ## Milestone 2: Campaign Dashboard
 
@@ -61,12 +71,13 @@ Goal: replace toolbox-first orientation with a campaign-first overview.
   - [x] current situation
   - [x] active arcs
   - [x] unresolved threads
-  - [ ] major NPCs
+  - [ ] major NPCs from entity/state memory, once that storage exists
   - [x] current location
-  - [ ] party state
+  - [ ] party state from entity/state memory, once that storage exists
   - [ ] recent memory activity
 - [x] Reuse existing lorebook/memory data first; avoid creating a new storage model until needed.
-- [ ] Add empty states that explain what will appear after memories exist.
+- [x] Add basic scratchpad empty states for chats without a parsed scratchpad.
+- [ ] Add richer empty states that explain what will appear after memories and entity/state data exist.
 - [ ] Keep old controls accessible below the dashboard or behind an Advanced Tools area.
 
 Acceptance criteria:
@@ -127,20 +138,30 @@ Goal: trigger RPG memory generation from meaningful campaign events rather than 
   - [x] `State: candidate` is exposed to dashboard/status and can be confirmed by existing heuristics
   - [x] `State: none` suppresses scratchpad-delta memory creation for unresolved present-state work
   - [x] `Memory Scope` and `Temporal Anchor` are passed into memory generation
+- [x] Add a parser/debug harness for real scratchpad examples:
+  - [x] parse top-level scene state, active threads, and deeper notes from HTML details blocks
+  - [x] parse explicit `Memory Trigger` fields for `none`, `candidate`, and `required`
+  - [x] verify dashboard snapshot text is readable after HTML cleanup
+  - [x] verify duplicate required triggers do not bypass cooldown repeatedly
 - [x] Store last content-trigger check position per chat.
 - [x] Add minimum cooldown so trigger checks cannot spam memory generation.
 - [x] Keep fixed interval as a fallback max interval.
-- [ ] Route trigger decisions through RPG automation policy:
-  - [ ] `silent`: auto-save high-confidence low-risk updates
-  - [ ] `review_major`: review major canon changes
-  - [ ] `manual`: ask before generation
+- [x] Route trigger decisions through RPG automation policy:
+  - [x] `silent`: auto-save high-confidence low-risk updates
+  - [x] `review_major`: review major canon changes
+  - [x] `manual`: ask before generation
 - [x] Add settings for content-aware triggering:
   - [x] enabled/disabled
   - [x] check cadence
   - [x] fallback interval
   - [ ] review sensitivity
 - [x] Add concise status/UI feedback showing why a memory was triggered.
-- [ ] Add manual verification cases for content-triggered memories.
+- [ ] Add manual verification cases for content-triggered memories:
+  - [ ] explicit required scratchpad trigger
+  - [ ] candidate scratchpad trigger plus confirming prose event
+  - [ ] none scratchpad trigger with noisy scratchpad edits
+  - [ ] cooldown duplicate suppression
+  - [ ] fallback interval after quiet play
 
 Acceptance criteria:
 
@@ -288,20 +309,23 @@ Acceptance criteria:
 ## Open Design Questions
 
 - Should RPG campaign state be stored as ordinary lorebook entries, extension metadata, or a hybrid?
-- What threshold makes a change "major" for `review_major`?
+- What threshold makes a change "major" for `review_major` when it comes from an explicit scratchpad trigger?
 - Should Memory Inbox be per-chat, per-lorebook, or global?
 - How should group chats attribute party/player state?
 - Which entity updates are safe to apply silently?
 - How much generated reasoning/context should be stored for auditability?
+- Should the LLM-authored scratchpad be treated as a trusted trigger source only when the user has opted into a compatible preset/instruction?
+- How should temporal continuity conflicts be reconciled when scratchpad scene state and existing memory disagree?
 
 ## Near-Term Next Commit
 
 Recommended next implementation commit:
 
-1. Add RPG mode status row to the settings UI.
-2. Add concise manual verification notes.
-3. Test in SillyTavern:
-   - disabled baseline
-   - silent policy
-   - review major policy
-   - manual policy
+1. Add manual verification cases for content-triggered memories:
+   - explicit required scratchpad trigger
+   - candidate scratchpad trigger plus confirming prose event
+   - none scratchpad trigger with noisy scratchpad edits
+   - cooldown duplicate suppression
+   - fallback interval after quiet play
+2. Add review sensitivity settings for borderline content-trigger decisions.
+3. Start Memory Inbox design and storage once manual verification confirms trigger behavior.

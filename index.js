@@ -489,7 +489,58 @@ function normalizeRpgContentTriggerSettings(moduleSettings) {
   };
 }
 
-function shouldShowMemoryPreview(settings) {
+function getRpgMemoryTriggerFromPreviewContext(context = null) {
+  const compiledTrigger = context?.compiledScene?.metadata?.rpgMemoryTrigger;
+  if (compiledTrigger) {
+    return compiledTrigger;
+  }
+
+  const directTrigger = context?.rpgMemoryTrigger;
+  if (directTrigger) {
+    return directTrigger;
+  }
+
+  const sceneEnd = Number.isFinite(context?.sceneData?.sceneEnd)
+    ? context.sceneData.sceneEnd
+    : Number.isFinite(context?.sceneEnd)
+      ? context.sceneEnd
+      : null;
+  if (!Number.isFinite(sceneEnd)) {
+    return null;
+  }
+
+  const markers = getSceneMarkers() || {};
+  if (markers.rpgContentLastTriggeredMessage !== sceneEnd) {
+    return null;
+  }
+
+  return {
+    reason: markers.rpgContentLastTriggerReason || "",
+    type: markers.rpgContentLastTriggerType || "",
+    confidence: Number.isFinite(markers.rpgContentLastTriggerConfidence)
+      ? markers.rpgContentLastTriggerConfidence
+      : null,
+    scope: markers.rpgContentLastMemoryScope || markers.rpgScratchpadMemoryScope || "",
+    temporalAnchor: markers.rpgContentLastTemporalAnchor || markers.rpgScratchpadTemporalAnchor || "",
+    scratchpadState: markers.rpgContentLastScratchpadState || markers.rpgScratchpadTriggerState || "",
+    reviewRequired: markers.rpgContentLastReviewRequired === true,
+  };
+}
+
+function isMajorRpgMemoryTrigger(trigger) {
+  if (!trigger) {
+    return false;
+  }
+  if (trigger.reviewRequired === true) {
+    return true;
+  }
+  if (String(trigger.scratchpadState || "").trim().toLowerCase() === "required") {
+    return true;
+  }
+  return false;
+}
+
+function shouldShowMemoryPreview(settings, context = null) {
   const moduleSettings = settings?.moduleSettings || settings || {};
   if (moduleSettings.showMemoryPreviews) {
     return true;
@@ -498,10 +549,13 @@ function shouldShowMemoryPreview(settings) {
     return false;
   }
   const policy = normalizeRpgAutomationPolicy(moduleSettings.rpgAutomationPolicy);
-  return (
-    policy === RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR ||
-    policy === RPG_MEMORY.AUTOMATION_POLICIES.MANUAL
-  );
+  if (policy === RPG_MEMORY.AUTOMATION_POLICIES.MANUAL) {
+    return true;
+  }
+  if (policy === RPG_MEMORY.AUTOMATION_POLICIES.REVIEW_MAJOR) {
+    return isMajorRpgMemoryTrigger(getRpgMemoryTriggerFromPreviewContext(context));
+  }
+  return false;
 }
 
 function isMemoryBoundaryDividerEnabled(mode = null) {
@@ -779,6 +833,7 @@ function applyRpgTriggerContextToCompiledScene(compiledScene) {
     scope: markers.rpgContentLastMemoryScope || markers.rpgScratchpadMemoryScope || "",
     temporalAnchor: markers.rpgContentLastTemporalAnchor || markers.rpgScratchpadTemporalAnchor || "",
     scratchpadState: markers.rpgContentLastScratchpadState || markers.rpgScratchpadTriggerState || "",
+    reviewRequired: markers.rpgContentLastReviewRequired === true,
   };
 
   return compiledScene;
@@ -2852,7 +2907,7 @@ async function executeMemoryGeneration(
     // Check if memory previews are enabled and handle accordingly
     let finalMemoryResult = memoryResult;
 
-    if (shouldShowMemoryPreview(settings)) {
+    if (shouldShowMemoryPreview(settings, { sceneData, compiledScene })) {
       // Clear working toast before showing preview popup
       toastr.clear();
 
@@ -3387,7 +3442,7 @@ async function executeQueuedMemoryJob(job, jobContext) {
   jobContext.throwIfCancelled();
 
   let finalMemoryResult = memoryResult;
-  if (shouldShowMemoryPreview(settings)) {
+  if (shouldShowMemoryPreview(settings, { sceneData, compiledScene })) {
     const approval = await awaitStmbJobApproval(
       jobContext,
       {
